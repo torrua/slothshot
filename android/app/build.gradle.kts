@@ -70,7 +70,14 @@ dependencies {
     // Coil for Compose image loading (screenshot thumbnails)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // Google ML Kit Text Recognition (On-device OCR)
+    // Tesseract 4 Android (100% On-Device Cyrillic Russian & English OCR)
+    implementation("cz.adaptech.tesseract4android:tesseract4android-openmp:4.9.0")
+
+    // Google ML Kit On-Device Translation & Language ID
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
+
+    // Google ML Kit Text Recognition (Fast Latin fallback)
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
     // Coroutines & Play Services integration for ML Kit Task.await()

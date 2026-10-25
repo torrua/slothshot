@@ -11,8 +11,10 @@ import com.slothshot.app.model.ContentCategory
 import com.slothshot.app.model.RetentionClass
 import com.slothshot.app.model.TriageItem
 import com.slothshot.app.ocr.MlKitOcrEngine
+import com.slothshot.app.ocr.TesseractOcrEngine
 import com.slothshot.app.triage.GeminiTriageEngine
 import com.slothshot.app.triage.HeuristicTriageEngine
+import com.slothshot.app.triage.OnDeviceTranslator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +41,9 @@ class TriageRepository private constructor(context: Context) {
     private val _itemsFlow = MutableStateFlow<List<TriageItem>>(emptyList())
     val itemsFlow: StateFlow<List<TriageItem>> = _itemsFlow.asStateFlow()
 
-    private val ocrEngine = MlKitOcrEngine()
+    private val tesseractOcr = TesseractOcrEngine()
+    private val mlKitOcr = MlKitOcrEngine()
+    private val onDeviceTranslator = OnDeviceTranslator()
     private val heuristicTriage = HeuristicTriageEngine()
     private val geminiTriage = GeminiTriageEngine(apiKeyProvider = { getApiKey() })
 
@@ -99,11 +103,50 @@ class TriageRepository private constructor(context: Context) {
         val existing = _itemsFlow.value.find { it.uriString == uri.toString() }
         if (existing != null) return@withContext existing
 
-        val ocr = ocrEngine.recognizeText(appContext, uri)
-        val takeaway = if (getApiKey().isNotBlank()) {
-            geminiTriage.triage(ocr, fileName, appContext, uri)
+        // Path 1: Cloud Multimodal Vision (if Gemini key configured)
+        if (getApiKey().isNotBlank()) {
+            val cloudResult = geminiTriage.triage("", fileName, appContext, uri)
+            val item = TriageItem(
+                id = UUID.randomUUID().toString(),
+                uriString = uri.toString(),
+                fileName = fileName,
+                timestamp = System.currentTimeMillis(),
+                fileSizeBytes = sizeBytes,
+                category = cloudResult.category,
+                retention = cloudResult.retention,
+                title = cloudResult.title,
+                summary = cloudResult.summary,
+                keyValues = cloudResult.keyValues,
+                tags = cloudResult.tags,
+                primaryActionType = cloudResult.actionType,
+                primaryActionLabel = cloudResult.actionLabel,
+                primaryActionPayload = cloudResult.actionPayload,
+                rawContent = cloudResult.fullRawContent.orEmpty(),
+                isPurged = false
+            )
+            val updated = listOf(item) + _itemsFlow.value
+            _itemsFlow.value = updated
+            persistItems(updated)
+            return@withContext item
+        }
+
+        // Path 2: 100% On-Device Offline Engine (Tesseract Cyrillic + ML Kit Translator)
+        var rawText = tesseractOcr.recognizeText(appContext, uri)
+        if (rawText.isBlank()) {
+            // Fallback to ML Kit if Tesseract couldn't extract
+            rawText = mlKitOcr.recognizeText(appContext, uri)
+        }
+
+        // Translate to Russian if screenshot is in English/foreign language
+        val translatedRussianText = onDeviceTranslator.translateToRussianIfNeeded(rawText)
+
+        // Run Russian heuristic triage
+        val takeaway = heuristicTriage.triage(translatedRussianText.ifBlank { rawText }, fileName)
+
+        val fullDisplayContent = if (translatedRussianText.isNotBlank() && translatedRussianText != rawText) {
+            "🇷🇺 Перевод на русский:\n$translatedRussianText\n\n📄 Оригинал OCR:\n$rawText"
         } else {
-            heuristicTriage.triage(ocr, fileName)
+            rawText
         }
 
         val item = TriageItem(
@@ -121,7 +164,7 @@ class TriageRepository private constructor(context: Context) {
             primaryActionType = takeaway.actionType,
             primaryActionLabel = takeaway.actionLabel,
             primaryActionPayload = takeaway.actionPayload,
-            rawContent = takeaway.fullRawContent ?: ocr,
+            rawContent = fullDisplayContent,
             isPurged = false
         )
 
