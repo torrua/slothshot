@@ -61,6 +61,27 @@ Instead of treating screenshots like dumb static images to be hoarded forever, S
 
 ---
 
+## 📱 Interface Walkthrough & Visual Demo
+
+SlothShot is designed mobile-first with an ultra-clean, tactile dark-mode interface:
+
+### 1. The Lazy Payoff Dashboard
+Real-time metrics tracking storage reclaimed, cognitive time saved, media recommendations cataloged, and expired junk purged—complete with 1-click bulk purge, tag filtering (`#movie`, `#book`, `#wifi`, `#product`), and ADB sync:
+
+![SlothShot Dashboard Overview: Lazy Payoff Metrics, Storage Reclaimed, and Ingestion Area](https://raw.githubusercontent.com/torrua/slothshot/main/assets/screenshots/01_dashboard_overview.png)
+
+### 2. Universal Takeaway Cards & 1-Click Action Buttons
+Every screenshot is rendered with a schema-free essence card: headline, concise summary, dynamic key-facts grid, 1-click action buttons (Letterboxd, IMDb, Goodreads, Google Search, Copy Wi-Fi), and an expandable drawer preserving 100% of the raw OCR text with a copy button:
+
+![SlothShot Action Cards Detail: Universal Takeaways, IMDb/Goodreads Links, Key-Value Facts, and Full OCR Drawer](https://raw.githubusercontent.com/torrua/slothshot/main/assets/screenshots/02_action_cards_detail.png)
+
+### 3. In-App Multimodal Gemini & Gemma 2 AI Modal
+Configure Google AI Studio keys directly in the browser, choose models (Gemini 2.5 Flash, Gemma 2 9B IT), toggle between Local Offline and Cloud Multimodal modes, and trigger 1-click re-analysis:
+
+![SlothShot AI Settings Modal: Gemini 2.5 Flash / Gemma 2 Multimodal Configuration](https://raw.githubusercontent.com/torrua/slothshot/main/assets/screenshots/03_gemini_settings_modal.png)
+
+---
+
 ## ⚡ The Dual-Brain Open AI Pipeline
 
 ```mermaid
