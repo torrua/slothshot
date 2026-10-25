@@ -25,7 +25,9 @@ import com.slothshot.app.ui.theme.SlothSurfaceVariant
 @Composable
 fun DashboardMetricsCard(
     metrics: TriageMetrics,
+    hasApiKey: Boolean,
     isScanning: Boolean,
+    onConfigureKeyClicked: () -> Unit,
     onScanGalleryClicked: () -> Unit,
     onPurgeAllClicked: () -> Unit,
     modifier: Modifier = Modifier
@@ -40,7 +42,7 @@ fun DashboardMetricsCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Header
             Row(
@@ -49,16 +51,53 @@ fun DashboardMetricsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "🦥 Triage Dashboard",
+                    text = "🦥 Дашборд SlothShot",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${metrics.totalScanned} Triaged",
+                    text = "${metrics.totalScanned} Разобрано",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            // Key Alert Banner if not configured
+            if (!hasApiKey) {
+                Surface(
+                    onClick = onConfigureKeyClicked,
+                    color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🔑", fontSize = 18.sp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Включить перевод и русский OCR",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = Color(0xFFF59E0B)
+                            )
+                            Text(
+                                text = "Бесплатный ключ Gemini даёт 100% русский язык",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = "Настроить →",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF59E0B)
+                        )
+                    }
+                }
             }
 
             // Metrics Row
@@ -67,20 +106,20 @@ fun DashboardMetricsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MetricTile(
-                    label = "Reclaimed",
+                    label = "Освобождено",
                     value = formatBytes(metrics.reclaimedBytes),
                     accentColor = SlothPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 MetricTile(
-                    label = "Junk Ready",
+                    label = "Мусор (2FA)",
                     value = "${metrics.ephemeralJunkCount}",
                     accentColor = if (metrics.ephemeralJunkCount > 0) SlothError else SlothSecondary,
                     modifier = Modifier.weight(1f)
                 )
                 MetricTile(
-                    label = "Time Saved",
-                    value = "${metrics.timeSavedMinutes}m",
+                    label = "Сэкономлено",
+                    value = "${metrics.timeSavedMinutes}м",
                     accentColor = SlothSecondary,
                     modifier = Modifier.weight(1f)
                 )
@@ -104,12 +143,12 @@ fun DashboardMetricsCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.FolderDelete,
-                        contentDescription = "Purge Junk",
+                        contentDescription = "Очистить мусор",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Purge (${metrics.ephemeralJunkCount})",
+                        text = "Очистить (${metrics.ephemeralJunkCount})",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
@@ -132,15 +171,15 @@ fun DashboardMetricsCard(
                             color = SlothPrimary
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Scanning...", fontSize = 13.sp)
+                        Text("Анализ...", fontSize = 13.sp)
                     } else {
                         Icon(
                             imageVector = Icons.Default.DocumentScanner,
-                            contentDescription = "Scan Gallery",
+                            contentDescription = "Сканировать",
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Scan Gallery", fontSize = 13.sp)
+                        Text("Сканировать", fontSize = 13.sp)
                     }
                 }
             }
@@ -180,11 +219,11 @@ private fun MetricTile(
 }
 
 private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "0 MB"
+    if (bytes <= 0) return "0 МБ"
     val mb = bytes.toDouble() / (1024 * 1024)
     return if (mb >= 1000) {
-        String.format("%.1f GB", mb / 1024)
+        String.format("%.1f ГБ", mb / 1024)
     } else {
-        String.format("%.1f MB", mb)
+        String.format("%.1f МБ", mb)
     }
 }

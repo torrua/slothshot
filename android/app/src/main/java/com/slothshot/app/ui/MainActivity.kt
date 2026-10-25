@@ -102,7 +102,9 @@ class MainActivity : ComponentActivity() {
                         // Dashboard Metrics Card
                         DashboardMetricsCard(
                             metrics = metrics,
+                            hasApiKey = viewModel.getApiKey().isNotBlank(),
                             isScanning = isScanning,
+                            onConfigureKeyClicked = { viewModel.showSettings.value = true },
                             onScanGalleryClicked = { viewModel.scanGallery() },
                             onPurgeAllClicked = {
                                 val ephemeralItems = items.filter { it.retention == RetentionClass.EPHEMERAL_PURGE && !it.isPurged }

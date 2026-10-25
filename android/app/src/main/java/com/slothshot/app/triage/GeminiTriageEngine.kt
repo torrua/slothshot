@@ -24,8 +24,8 @@ class GeminiTriageEngine(
     private val heuristicFallback: HeuristicTriageEngine = HeuristicTriageEngine()
 ) {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS)
+        .connectTimeout(25, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
     suspend fun triage(
@@ -36,46 +36,56 @@ class GeminiTriageEngine(
     ): ParsedTakeaway = withContext(Dispatchers.IO) {
         val apiKey = apiKeyProvider().trim()
         if (apiKey.isEmpty()) {
-            return@withContext heuristicFallback.triage(ocrText, fileName)
+            // No API key configured: fallback to heuristic without generating fake Latin gibberish
+            val heuristicResult = heuristicFallback.triage(ocrText, fileName)
+            return@withContext heuristicResult.copy(
+                summary = "${heuristicResult.summary}\n(💡 Для 100% распознавания кириллицы и перевода на русский укажите ключ Gemini в Настройках)"
+            )
         }
 
         try {
             val systemPrompt = """
-                You are SlothShot, an autonomous on-device triage agent for Android screenshots.
-                Analyze the screenshot image and/or text.
-                Preserve Russian, Cyrillic, or English text accurately in their original script.
-                Extract the core universal takeaway in JSON format with these exact fields:
-                - title: brief descriptive headline (max 5 words, in the language of the screenshot)
-                - summary: clear 1-sentence explanation of why the user took this screenshot
-                - category: one of ["TEMPORARY_UTILITY", "ENTERTAINMENT_MEDIA", "TRANSACTIONAL_RECEIPT", "KNOWLEDGE_REFERENCE", "PERSONAL_CHAT", "UNKNOWN"]
-                - retention: one of ["EPHEMERAL_PURGE", "KEEP_ARCHIVE", "ACTION_REQUIRED"]
-                - key_values: object with 1-4 key-value pairs (e.g. {"Код": "849211"} or {"Password": "secret"})
-                - tags: list of 2-4 lowercase strings
-                - action_label: short action label (e.g. "Скопировать код", "Search IMDb", "Track Package")
-                - action_payload: string payload for the action
-                - action_type: one of ["COPY", "OPEN_URL", "SEARCH_WEB", "SHARE", "PURGE"]
-                - raw_content: the complete unabbreviated text read from the image in its original language (Russian, English, etc.)
+                Ты — SlothShot, интеллектуальный органайзер скриншотов.
+                Твоя главная задача — выдать результат НА ЧИСТОМ, ГРАМОТНОМ РУССКОМ ЯЗЫКЕ.
 
-                Return ONLY valid JSON.
+                Инструкции:
+                1. Внимательно посмотри на скриншот (изображение).
+                2. Если на скриншоте русский текст — распознай его с идеальной точностью (никакой ломаной латиницы!).
+                3. Если на скриншоте иностранный язык (английский и др.) — ОБЯЗАТЕЛЬНО ПЕРЕВЕДИ весь смысл и ключевые факты НА РУССКИЙ ЯЗЫК.
+                4. Сформируй ответ СТРОГО в формате JSON со следующими полями:
+                   - "title": краткий емкий заголовок НА РУССКОМ ЯЗЫКЕ (до 5 слов, например: "Код подтверждения Сбер", "Рекомендация фильма Дюна", "Чек из кофейни", "Пароль от Wi-Fi").
+                   - "summary": 1-2 понятных предложения НА РУССКОМ ЯЗЫКЕ, объясняющие, зачем был сделан скриншот и что в нем главного. Если скриншот иностранный — дай краткий перевод его сути.
+                   - "category": одна из категорий ["TEMPORARY_UTILITY", "ENTERTAINMENT_MEDIA", "TRANSACTIONAL_RECEIPT", "KNOWLEDGE_REFERENCE", "PERSONAL_CHAT", "UNKNOWN"]
+                   - "retention": одна из ["EPHEMERAL_PURGE", "KEEP_ARCHIVE", "ACTION_REQUIRED"] (для одноразовых кодов/паролей выбирай EPHEMERAL_PURGE).
+                   - "key_values": объект с ключевыми параметрами НА РУССКОМ ЯЗЫКЕ (например {"Код": "849211"} или {"Сеть": "Guest", "Пароль": "secret"} или {"Сумма": "450 ₽"}).
+                   - "tags": список тегов НА РУССКОМ ЯЗЫКЕ (например ["код", "безопасность", "удалить"]).
+                   - "action_label": понятное действие на русском (например "Скопировать код", "Искать фильм", "Открыть ссылку").
+                   - "action_payload": значение для копирования или поиска (код, пароль, ссылка или название).
+                   - "action_type": одно из ["COPY", "OPEN_URL", "SEARCH_WEB", "SHARE", "PURGE"]
+                   - "raw_content": полный текст со скриншота на русском языке (если скриншот на иностранном — приведи оригинальный текст и следом его полный перевод на русский язык).
+
+                Верни ТОЛЬКО валидный JSON без markdown-оберток.
             """.trimIndent()
 
             val partsArray = JSONArray()
 
-            // If image is available, include base64 jpeg for multimodal OCR
+            // Encode screenshot image to JPEG base64
+            var hasImage = false
             if (context != null && imageUri != null) {
                 val base64Image = encodeImageToBase64(context, imageUri)
-                if (base64Image != null) {
+                if (!base64Image.isNullOrBlank()) {
                     partsArray.put(JSONObject().apply {
                         put("inline_data", JSONObject().apply {
                             put("mime_type", "image/jpeg")
                             put("data", base64Image)
                         })
                     })
+                    hasImage = true
                 }
             }
 
             partsArray.put(JSONObject().apply {
-                put("text", "$systemPrompt\n\nFallback OCR Text from screenshot '$fileName':\n$ocrText")
+                put("text", "$systemPrompt\n\nИмя файла скриншота: $fileName" + (if (!hasImage && ocrText.isNotBlank()) "\nТекст: $ocrText" else ""))
             })
 
             val requestBodyJson = JSONObject().apply {
@@ -86,7 +96,7 @@ class GeminiTriageEngine(
                 })
                 put("generationConfig", JSONObject().apply {
                     put("response_mime_type", "application/json")
-                    put("temperature", 0.2)
+                    put("temperature", 0.1)
                 })
             }
 
@@ -97,19 +107,32 @@ class GeminiTriageEngine(
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return@withContext heuristicFallback.triage(ocrText, fileName)
+                    val fallback = heuristicFallback.triage(ocrText, fileName)
+                    return@withContext fallback.copy(
+                        summary = "${fallback.summary}\n(Ошибка вызова Gemini: HTTP ${response.code})"
+                    )
                 }
+
                 val respStr = response.body?.string().orEmpty()
                 val jsonResp = JSONObject(respStr)
-                val candidates = jsonResp.optJSONArray("candidates") ?: return@withContext heuristicFallback.triage(ocrText, fileName)
-                if (candidates.length() == 0) return@withContext heuristicFallback.triage(ocrText, fileName)
+                val candidates = jsonResp.optJSONArray("candidates")
+                if (candidates == null || candidates.length() == 0) {
+                    return@withContext heuristicFallback.triage(ocrText, fileName)
+                }
+
                 val textContent = candidates.getJSONObject(0)
                     .getJSONObject("content")
                     .getJSONArray("parts")
                     .getJSONObject(0)
                     .getString("text")
 
-                val parsed = JSONObject(textContent.trim().removeSurrounding("```json", "```").trim())
+                val cleanJson = textContent.trim()
+                    .removePrefix("```json")
+                    .removePrefix("```")
+                    .removeSuffix("```")
+                    .trim()
+
+                val parsed = JSONObject(cleanJson)
 
                 val catStr = parsed.optString("category", "KNOWLEDGE_REFERENCE")
                 val category = runCatching { ContentCategory.valueOf(catStr) }.getOrDefault(ContentCategory.KNOWLEDGE_REFERENCE)
@@ -134,23 +157,26 @@ class GeminiTriageEngine(
                     }
                 }
 
-                val fullRaw = parsed.optString("raw_content", "").ifBlank { ocrText }
+                val rawContentResult = parsed.optString("raw_content", "").ifBlank { ocrText }
 
                 ParsedTakeaway(
                     category = category,
                     retention = retention,
-                    title = parsed.optString("title", "Screenshot Takeaway"),
-                    summary = parsed.optString("summary", "Processed screenshot takeaway."),
+                    title = parsed.optString("title", "Скриншот"),
+                    summary = parsed.optString("summary", "Разобранный скриншот"),
                     keyValues = kvMap,
                     tags = tagsList,
                     actionType = actionType,
-                    actionLabel = parsed.optString("action_label", "Copy"),
-                    actionPayload = parsed.optString("action_payload", ocrText),
-                    fullRawContent = fullRaw
+                    actionLabel = parsed.optString("action_label", "Скопировать"),
+                    actionPayload = parsed.optString("action_payload", rawContentResult),
+                    fullRawContent = rawContentResult
                 )
             }
         } catch (e: Exception) {
-            heuristicFallback.triage(ocrText, fileName)
+            val fallback = heuristicFallback.triage(ocrText, fileName)
+            fallback.copy(
+                summary = "${fallback.summary}\n(Сбой сети: ${e.localizedMessage ?: "timeout"})"
+            )
         }
     }
 

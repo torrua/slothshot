@@ -31,7 +31,7 @@ class HeuristicTriageTest {
         assertEquals(ContentCategory.TEMPORARY_UTILITY, result.category)
         assertEquals(RetentionClass.ACTION_REQUIRED, result.retention)
         assertEquals("SuperSecretPass123", result.actionPayload)
-        assertEquals("GuestCoffee", result.keyValues["SSID"])
+        assertEquals("GuestCoffee", result.keyValues["Сеть"] ?: result.keyValues["SSID"])
     }
 
     @Test
