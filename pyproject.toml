@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "slothshot"
-version = "1.0.0"
+version = "1.1.0"
 description = "The Zero-Effort Android Screenshot Triage & Second Brain Butler powered by Gemma 2 & TabPFN"
 authors = [
     { name = "Torrua", email = "author@torrua.dev" }

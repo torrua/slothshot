@@ -14,16 +14,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,7 +96,7 @@ class MainActivity : ComponentActivity() {
                             onSettingsClicked = { viewModel.showSettings.value = true }
                         )
                     },
-                    containerColor = SlothDarkBackground
+                    containerColor = MaterialTheme.colorScheme.background
                 ) { innerPadding ->
                     Column(
                         modifier = Modifier
@@ -247,36 +252,73 @@ private fun SlothTopAppBar(
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF059669), Color(0xFF10B981))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🦥",
+                        fontSize = 18.sp
+                    )
+                }
                 Text(
-                    text = "🦥 SlothShot",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "SlothShot",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 19.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = (-0.4).sp
                 )
                 if (isMonitoring) {
-                    Box(
-                        modifier = Modifier
-                            .background(SlothPrimary.copy(alpha = 0.2f), shape = MaterialTheme.shapes.small)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    Surface(
+                        color = SlothPrimary.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(100.dp),
+                        border = BorderStroke(1.dp, SlothPrimary.copy(alpha = 0.25f))
                     ) {
-                        Text(
-                            text = "LIVE",
-                            color = SlothPrimary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(SlothPrimary)
+                            )
+                            Text(
+                                text = "LIVE",
+                                color = SlothPrimary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
                     }
                 }
             }
         },
         actions = {
-            IconButton(onClick = onSettingsClicked) {
+            IconButton(
+                onClick = onSettingsClicked,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.05f))
+            ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Settings",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    modifier = Modifier.size(19.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 )
             }
         },
@@ -303,13 +345,13 @@ private fun EmptyState(isScanning: Boolean) {
                 fontSize = 48.sp
             )
             Text(
-                text = if (isScanning) "Sloth is scanning your screenshots..." else "No screenshots found yet",
+                text = if (isScanning) "Ленивец анализирует скриншоты..." else "Лента скриншотов пуста",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = if (isScanning) "Running Google ML Kit on-device OCR..." else "Take a screenshot on your phone, or tap 'Scan Gallery' above to triage existing photos.",
+                text = if (isScanning) "Работает локальное распознавание текста (Google ML Kit)..." else "Сделайте новый скриншот или нажмите «Сканировать» выше для разбора галереи.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

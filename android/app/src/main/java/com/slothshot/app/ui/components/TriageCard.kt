@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,17 +48,19 @@ fun TriageCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Badges row
@@ -65,12 +70,19 @@ fun TriageCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Category Chip
-                Text(
-                    text = "${item.category.emoji} ${item.category.displayName}",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Surface(
+                    color = Color.White.copy(alpha = 0.04f),
+                    shape = RoundedCornerShape(100.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f))
+                ) {
+                    Text(
+                        text = "${item.category.emoji} ${item.category.displayName}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                    )
+                }
 
                 // Retention Badge
                 val retentionColor = when (item.retention) {
@@ -79,17 +91,17 @@ fun TriageCard(
                     RetentionClass.ACTION_REQUIRED -> Color(0xFFF59E0B)
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (item.isPurged) Color.Gray.copy(alpha = 0.2f) else retentionColor.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                Surface(
+                    color = if (item.isPurged) Color.White.copy(alpha = 0.05f) else retentionColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(100.dp),
+                    border = BorderStroke(1.dp, if (item.isPurged) Color.White.copy(alpha = 0.1f) else retentionColor.copy(alpha = 0.25f))
                 ) {
                     Text(
-                        text = if (item.isPurged) "PURGED 🗑️" else item.retention.label,
+                        text = if (item.isPurged) "ОЧИЩЕНО 🗑️" else item.retention.label,
                         color = if (item.isPurged) Color.Gray else retentionColor,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                     )
                 }
             }
@@ -104,8 +116,8 @@ fun TriageCard(
                 Box(
                     modifier = Modifier
                         .size(68.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SlothSurfaceVariant)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.04f))
                         .clickable { onImageClicked(item) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -147,25 +159,25 @@ fun TriageCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     item.keyValues.entries.take(3).forEach { (k, v) ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(SlothSurfaceVariant.copy(alpha = 0.6f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.04f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
                         ) {
                             Text(
                                 text = "$k: $v",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = SlothPrimary,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
                     }
                 }
             }
 
-            Divider(color = SlothSurfaceVariant.copy(alpha = 0.4f), thickness = 0.8.dp)
+            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.8.dp)
 
             // Actions row
             Row(
@@ -173,18 +185,21 @@ fun TriageCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Primary Action Button
+                // Primary Action Button (accessible height)
                 FilledTonalButton(
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         handleAction(context, item.primaryActionType, item.primaryActionPayload)
                     },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = SlothPrimary.copy(alpha = 0.2f),
                         contentColor = SlothPrimary
                     ),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.weight(1f)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 44.dp)
                 ) {
                     val icon = when (item.primaryActionType) {
                         ActionType.COPY -> Icons.Default.ContentCopy
@@ -202,27 +217,32 @@ fun TriageCard(
                     )
                 }
 
-                // OCR Raw Content Button
+                // OCR Raw Content Button (WCAG 44-48dp touch target)
                 IconButton(
                     onClick = { onViewRawContent(item) },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Description,
-                        contentDescription = "View Raw OCR",
+                        contentDescription = "Посмотреть распознанный текст",
+                        modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // Purge Button
+                // Purge Button (WCAG 44-48dp touch target with haptic feedback)
                 if (!item.isPurged) {
                     IconButton(
-                        onClick = { onPurgeClicked(item) },
-                        modifier = Modifier.size(36.dp)
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onPurgeClicked(item)
+                        },
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Purge Screenshot",
+                            contentDescription = "Удалить скриншот",
+                            modifier = Modifier.size(20.dp),
                             tint = SlothError
                         )
                     }

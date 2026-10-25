@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.slothshot.app.model.TriageItem
 import com.slothshot.app.ui.theme.SlothPrimary
-import com.slothshot.app.ui.theme.SlothSurfaceVariant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun RawContentBottomSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
                 .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Header
             Row(
@@ -56,7 +57,7 @@ fun RawContentBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "📝 Raw OCR Content",
+                        text = "Распознанный текст OCR",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -68,8 +69,11 @@ fun RawContentBottomSheet(
                     )
                 }
 
-                IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Закрыть", modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -79,35 +83,47 @@ fun RawContentBottomSheet(
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("SlothShot OCR", item.rawContent)
                     clipboard.setPrimaryClip(clip)
-                    Toast.makeText(context, "Full text copied to clipboard!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Текст скопирован в буфер!", Toast.LENGTH_SHORT).show()
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SlothPrimary)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SlothPrimary,
+                    contentColor = Color.White
+                )
             ) {
-                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Copy Full OCR Text", fontWeight = FontWeight.Bold)
+                Text("Скопировать весь текст", fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
 
             // OCR Text container
-            Box(
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color.White.copy(alpha = 0.03f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SlothSurfaceVariant.copy(alpha = 0.5f))
-                    .padding(14.dp)
-                    .verticalScroll(rememberScrollState())
+                    .heightIn(max = 380.dp)
             ) {
-                SelectionContainer {
-                    Text(
-                        text = item.rawContent.ifBlank { "(No text extracted by OCR)" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(14.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    SelectionContainer {
+                        Text(
+                            text = item.rawContent.ifBlank { "(Текст не обнаружен)" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 18.sp
+                        )
+                    }
                 }
             }
         }
