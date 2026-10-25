@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -24,6 +25,7 @@ fun SettingsModal(
     autoCopyOtp: Boolean,
     monitoringActive: Boolean,
     onSaveSettings: (apiKey: String, autoCopyOtp: Boolean, monitoringActive: Boolean) -> Unit,
+    onClearAndRescan: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var apiKey by remember { mutableStateOf(currentApiKey) }
@@ -117,6 +119,22 @@ fun SettingsModal(
                         checked = monitoring,
                         onCheckedChange = { monitoring = it }
                     )
+                }
+
+                Divider(color = SlothSurfaceVariant)
+
+                OutlinedButton(
+                    onClick = {
+                        onClearAndRescan()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SlothPrimary)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Re-scan Gallery (Clear Cache)")
                 }
             }
         },

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,6 +41,7 @@ fun TriageCard(
     item: TriageItem,
     onPurgeClicked: (TriageItem) -> Unit,
     onViewRawContent: (TriageItem) -> Unit,
+    onImageClicked: (TriageItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -98,16 +100,22 @@ fun TriageCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                // Thumbnail
-                AsyncImage(
-                    model = item.uriString,
-                    contentDescription = item.title,
+                // Thumbnail (clickable for full-screen view)
+                Box(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(SlothSurfaceVariant),
-                    contentScale = ContentScale.Crop
-                )
+                        .background(SlothSurfaceVariant)
+                        .clickable { onImageClicked(item) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = item.uriString,
+                        contentDescription = item.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
                 // Title & Summary
                 Column(

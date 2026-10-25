@@ -1,5 +1,10 @@
 package com.slothshot.app.triage
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
 import com.slothshot.app.model.ActionType
 import com.slothshot.app.model.ContentCategory
 import com.slothshot.app.model.RetentionClass
@@ -11,6 +16,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
 class GeminiTriageEngine(
@@ -18,11 +24,16 @@ class GeminiTriageEngine(
     private val heuristicFallback: HeuristicTriageEngine = HeuristicTriageEngine()
 ) {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(25, TimeUnit.SECONDS)
         .build()
 
-    suspend fun triage(ocrText: String, fileName: String = ""): ParsedTakeaway = withContext(Dispatchers.IO) {
+    suspend fun triage(
+        ocrText: String,
+        fileName: String = "",
+        context: Context? = null,
+        imageUri: Uri? = null
+    ): ParsedTakeaway = withContext(Dispatchers.IO) {
         val apiKey = apiKeyProvider().trim()
         if (apiKey.isEmpty()) {
             return@withContext heuristicFallback.triage(ocrText, fileName)
@@ -31,27 +42,46 @@ class GeminiTriageEngine(
         try {
             val systemPrompt = """
                 You are SlothShot, an autonomous on-device triage agent for Android screenshots.
-                Analyze the OCR text extracted from a user's screenshot.
+                Analyze the screenshot image and/or text.
+                Preserve Russian, Cyrillic, or English text accurately in their original script.
                 Extract the core universal takeaway in JSON format with these exact fields:
-                - title: brief descriptive headline (max 5 words)
+                - title: brief descriptive headline (max 5 words, in the language of the screenshot)
                 - summary: clear 1-sentence explanation of why the user took this screenshot
                 - category: one of ["TEMPORARY_UTILITY", "ENTERTAINMENT_MEDIA", "TRANSACTIONAL_RECEIPT", "KNOWLEDGE_REFERENCE", "PERSONAL_CHAT", "UNKNOWN"]
                 - retention: one of ["EPHEMERAL_PURGE", "KEEP_ARCHIVE", "ACTION_REQUIRED"]
-                - key_values: object with 1-4 key-value pairs (e.g. {"Code": "849211", "Expires": "10m"})
+                - key_values: object with 1-4 key-value pairs (e.g. {"Код": "849211"} or {"Password": "secret"})
                 - tags: list of 2-4 lowercase strings
-                - action_label: short action label (e.g. "Copy Code", "Search IMDb", "Track Package")
+                - action_label: short action label (e.g. "Скопировать код", "Search IMDb", "Track Package")
                 - action_payload: string payload for the action
                 - action_type: one of ["COPY", "OPEN_URL", "SEARCH_WEB", "SHARE", "PURGE"]
+                - raw_content: the complete unabbreviated text read from the image in its original language (Russian, English, etc.)
 
                 Return ONLY valid JSON.
             """.trimIndent()
 
+            val partsArray = JSONArray()
+
+            // If image is available, include base64 jpeg for multimodal OCR
+            if (context != null && imageUri != null) {
+                val base64Image = encodeImageToBase64(context, imageUri)
+                if (base64Image != null) {
+                    partsArray.put(JSONObject().apply {
+                        put("inline_data", JSONObject().apply {
+                            put("mime_type", "image/jpeg")
+                            put("data", base64Image)
+                        })
+                    })
+                }
+            }
+
+            partsArray.put(JSONObject().apply {
+                put("text", "$systemPrompt\n\nFallback OCR Text from screenshot '$fileName':\n$ocrText")
+            })
+
             val requestBodyJson = JSONObject().apply {
                 put("contents", JSONArray().apply {
                     put(JSONObject().apply {
-                        put("parts", JSONArray().apply {
-                            put(JSONObject().put("text", "$systemPrompt\n\nOCR Text from screenshot '$fileName':\n$ocrText"))
-                        })
+                        put("parts", partsArray)
                     })
                 })
                 put("generationConfig", JSONObject().apply {
@@ -104,6 +134,8 @@ class GeminiTriageEngine(
                     }
                 }
 
+                val fullRaw = parsed.optString("raw_content", "").ifBlank { ocrText }
+
                 ParsedTakeaway(
                     category = category,
                     retention = retention,
@@ -113,11 +145,42 @@ class GeminiTriageEngine(
                     tags = tagsList,
                     actionType = actionType,
                     actionLabel = parsed.optString("action_label", "Copy"),
-                    actionPayload = parsed.optString("action_payload", ocrText)
+                    actionPayload = parsed.optString("action_payload", ocrText),
+                    fullRawContent = fullRaw
                 )
             }
         } catch (e: Exception) {
             heuristicFallback.triage(ocrText, fileName)
+        }
+    }
+
+    private fun encodeImageToBase64(context: Context, uri: Uri, maxDimension: Int = 1024): String? {
+        return try {
+            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, boundsOptions)
+            }
+
+            var sampleSize = 1
+            var w = boundsOptions.outWidth
+            var h = boundsOptions.outHeight
+            while (w > maxDimension || h > maxDimension) {
+                sampleSize *= 2
+                w /= 2
+                h /= 2
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, decodeOptions)
+            } ?: return null
+
+            val outputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+            val bytes = outputStream.toByteArray()
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            null
         }
     }
 }

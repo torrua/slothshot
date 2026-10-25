@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                 val filter by viewModel.filter.collectAsState()
                 val isScanning by viewModel.isScanning.collectAsState()
                 val rawContentItem by viewModel.rawContentItem.collectAsState()
+                val fullScreenImageItem by viewModel.fullScreenImageItem.collectAsState()
                 val showSettings by viewModel.showSettings.collectAsState()
 
                 Scaffold(
@@ -128,7 +129,8 @@ class MainActivity : ComponentActivity() {
                                     TriageCard(
                                         item = item,
                                         onPurgeClicked = { requestPurge(listOf(it)) },
-                                        onViewRawContent = { viewModel.rawContentItem.value = it }
+                                        onViewRawContent = { viewModel.rawContentItem.value = it },
+                                        onImageClicked = { viewModel.fullScreenImageItem.value = it }
                                     )
                                 }
                             }
@@ -141,6 +143,12 @@ class MainActivity : ComponentActivity() {
                         onDismiss = { viewModel.rawContentItem.value = null }
                     )
 
+                    // Full Screen Image Viewer Dialog
+                    FullScreenImageViewerDialog(
+                        item = fullScreenImageItem,
+                        onDismiss = { viewModel.fullScreenImageItem.value = null }
+                    )
+
                     // Settings Dialog
                     if (showSettings) {
                         SettingsModal(
@@ -150,6 +158,7 @@ class MainActivity : ComponentActivity() {
                             onSaveSettings = { key, autoCopy, monitoring ->
                                 viewModel.updateSettings(key, autoCopy, monitoring)
                             },
+                            onClearAndRescan = { viewModel.clearAndRescan() },
                             onDismiss = { viewModel.showSettings.value = false }
                         )
                     }

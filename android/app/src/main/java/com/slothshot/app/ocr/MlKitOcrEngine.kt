@@ -5,6 +5,7 @@ import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.slothshot.app.triage.CyrillicDemangler
 import kotlinx.coroutines.tasks.await
 
 class MlKitOcrEngine {
@@ -14,7 +15,8 @@ class MlKitOcrEngine {
         return try {
             val image = InputImage.fromFilePath(context, uri)
             val visionText = recognizer.process(image).await()
-            visionText.text.trim()
+            val raw = visionText.text.trim()
+            CyrillicDemangler.clean(raw)
         } catch (e: Exception) {
             "OCR extraction failed: ${e.localizedMessage ?: "Unknown error"}"
         }

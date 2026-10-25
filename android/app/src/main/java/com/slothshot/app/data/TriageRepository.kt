@@ -101,7 +101,7 @@ class TriageRepository private constructor(context: Context) {
 
         val ocr = ocrEngine.recognizeText(appContext, uri)
         val takeaway = if (getApiKey().isNotBlank()) {
-            geminiTriage.triage(ocr, fileName)
+            geminiTriage.triage(ocr, fileName, appContext, uri)
         } else {
             heuristicTriage.triage(ocr, fileName)
         }
@@ -121,7 +121,7 @@ class TriageRepository private constructor(context: Context) {
             primaryActionType = takeaway.actionType,
             primaryActionLabel = takeaway.actionLabel,
             primaryActionPayload = takeaway.actionPayload,
-            rawContent = ocr,
+            rawContent = takeaway.fullRawContent ?: ocr,
             isPurged = false
         )
 
@@ -147,6 +147,13 @@ class TriageRepository private constructor(context: Context) {
         }
         _itemsFlow.value = updated
         persistItems(updated)
+    }
+
+    fun clearAllItems() {
+        _itemsFlow.value = emptyList()
+        if (storageFile.exists()) {
+            storageFile.delete()
+        }
     }
 
     suspend fun scanGalleryScreenshots(limit: Int = 30): List<TriageItem> = withContext(Dispatchers.IO) {

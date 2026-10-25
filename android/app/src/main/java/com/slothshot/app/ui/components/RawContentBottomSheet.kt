@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -93,19 +94,21 @@ fun RawContentBottomSheet(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 350.dp)
+                    .heightIn(max = 400.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(SlothSurfaceVariant.copy(alpha = 0.5f))
                     .padding(14.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Text(
-                    text = item.rawContent.ifBlank { "(No text extracted by OCR)" },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                SelectionContainer {
+                    Text(
+                        text = item.rawContent.ifBlank { "(No text extracted by OCR)" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }

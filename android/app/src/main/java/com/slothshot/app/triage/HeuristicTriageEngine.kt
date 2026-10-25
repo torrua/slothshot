@@ -14,7 +14,8 @@ data class ParsedTakeaway(
     val tags: List<String>,
     val actionType: ActionType,
     val actionLabel: String,
-    val actionPayload: String
+    val actionPayload: String,
+    val fullRawContent: String? = null
 )
 
 class HeuristicTriageEngine {
@@ -24,7 +25,7 @@ class HeuristicTriageEngine {
         val lower = text.lowercase()
 
         // 1. Check for OTP / 2FA code
-        val otpPattern = Pattern.compile("(?i)(?:code|verification|otp|2fa|код|пароль|security code)[^0-9a-zA-Z]{0,10}([0-9]{4,8}|[0-9]{3}[-\\s][0-9]{3})")
+        val otpPattern = Pattern.compile("(?i)(?:code|verification|otp|2fa|код|kog|пароль|napoл|security code)[^0-9a-zA-Z]{0,10}([0-9]{4,8}|[0-9]{3}[-\\s][0-9]{3})")
         val otpMatcher = otpPattern.matcher(text)
         if (otpMatcher.find()) {
             val code = otpMatcher.group(1)?.replace(" ", "")?.replace("-", "") ?: ""

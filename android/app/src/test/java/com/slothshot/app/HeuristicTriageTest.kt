@@ -64,4 +64,15 @@ class HeuristicTriageTest {
         assertEquals(RetentionClass.KEEP_ARCHIVE, result.retention)
         assertTrue(result.title.contains("8.00") || result.summary.contains("8.00"))
     }
+
+    @Test
+    fun testMangledRussianOtpDetection() {
+        val mangledOcr = "Kog nogTBepxgeHuR: 739201. He coo6waute ero Hukomy."
+        val cleaned = com.slothshot.app.triage.CyrillicDemangler.clean(mangledOcr)
+        assertTrue(cleaned.contains("Код") || cleaned.contains("подтверждения"))
+
+        val result = engine.triage(cleaned)
+        assertEquals(ContentCategory.TEMPORARY_UTILITY, result.category)
+        assertEquals("739201", result.actionPayload)
+    }
 }

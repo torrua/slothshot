@@ -19,6 +19,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val filter = MutableStateFlow<FilterType>(FilterType.All)
     val isScanning = MutableStateFlow(false)
     val rawContentItem = MutableStateFlow<TriageItem?>(null)
+    val fullScreenImageItem = MutableStateFlow<TriageItem?>(null)
     val showSettings = MutableStateFlow(false)
 
     val metrics = items.map { repository.getMetrics() }
@@ -41,6 +42,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (isScanning.value) return
         viewModelScope.launch {
             isScanning.value = true
+            repository.scanGalleryScreenshots(limit = 40)
+            isScanning.value = false
+        }
+    }
+
+    fun clearAndRescan() {
+        if (isScanning.value) return
+        viewModelScope.launch {
+            isScanning.value = true
+            repository.clearAllItems()
             repository.scanGalleryScreenshots(limit = 40)
             isScanning.value = false
         }
