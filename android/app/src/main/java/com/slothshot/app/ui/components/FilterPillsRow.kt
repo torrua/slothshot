@@ -26,12 +26,14 @@ sealed class FilterType {
 fun FilterPillsRow(
     selectedFilter: FilterType,
     onFilterSelected: (FilterType) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp)
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScroll(rememberScrollState())
+            .padding(contentPadding),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         SleekChip(

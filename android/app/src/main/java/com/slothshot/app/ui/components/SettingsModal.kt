@@ -11,6 +11,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -21,13 +24,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.slothshot.app.ai.QwenModelState
+import com.slothshot.app.ui.theme.SlothError
 import com.slothshot.app.ui.theme.SlothPrimary
 import com.slothshot.app.ui.theme.SlothSecondary
 import com.slothshot.app.ui.theme.SlothSurfaceVariant
@@ -37,7 +44,11 @@ fun SettingsModal(
     currentApiKey: String,
     autoCopyOtp: Boolean,
     monitoringActive: Boolean,
+    qwenModelState: QwenModelState = QwenModelState.NotDownloaded,
     onSaveSettings: (apiKey: String, autoCopyOtp: Boolean, monitoringActive: Boolean) -> Unit,
+    onStartQwenDownload: () -> Unit = {},
+    onCancelQwenDownload: () -> Unit = {},
+    onDeleteQwenModel: () -> Unit = {},
     onClearAndRescan: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -194,6 +205,177 @@ fun SettingsModal(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 15.sp
                         )
+                    }
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
+
+                // Section: Local VLM (Qwen2.5-VL 3B)
+                Text(
+                    text = "Локальный AI (Qwen2.5-VL 3B)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = SlothSecondary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp
+                )
+
+                Surface(
+                    color = Color.White.copy(alpha = 0.03f),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        when (qwenModelState) {
+                            is QwenModelState.Ready -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = SlothPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = "Модель активна",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.5.sp,
+                                                color = SlothPrimary
+                                            )
+                                            Text(
+                                                text = "Локальное зрение работает офлайн (3.1 ГБ)",
+                                                fontSize = 10.5.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = onDeleteQwenModel,
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SlothError),
+                                        border = BorderStroke(1.dp, SlothError.copy(alpha = 0.4f)),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(13.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Удалить", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                            is QwenModelState.Downloading -> {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Загрузка: ${qwenModelState.progressPercent}%",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = SlothSecondary
+                                        )
+                                        Text(
+                                            text = "${qwenModelState.downloadedMb} / ${qwenModelState.totalMb} МБ",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    LinearProgressIndicator(
+                                        progress = { qwenModelState.progressPercent / 100f },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(4.dp)
+                                            .clip(RoundedCornerShape(100.dp)),
+                                        color = SlothSecondary,
+                                        trackColor = Color.White.copy(alpha = 0.08f)
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        TextButton(
+                                            onClick = onCancelQwenDownload,
+                                            colors = ButtonDefaults.textButtonColors(contentColor = SlothError),
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                            modifier = Modifier.height(28.dp)
+                                        ) {
+                                            Text("Отмена", fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                            is QwenModelState.NotDownloaded -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Офлайн-зрение (Qwen 3B)",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Автономный разбор скриншотов (3.1 ГБ)",
+                                            fontSize = 10.5.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    FilledTonalButton(
+                                        onClick = onStartQwenDownload,
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = SlothSecondary.copy(alpha = 0.15f),
+                                            contentColor = SlothSecondary
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Скачать", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                            is QwenModelState.Error -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Ошибка загрузки", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = SlothError)
+                                        Text(
+                                            qwenModelState.message,
+                                            fontSize = 10.5.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    IconButton(onClick = onStartQwenDownload, modifier = Modifier.size(28.dp)) {
+                                        Icon(Icons.Default.Refresh, contentDescription = "Повторить", tint = SlothPrimary, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

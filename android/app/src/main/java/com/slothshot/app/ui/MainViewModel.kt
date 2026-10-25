@@ -69,6 +69,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.markAllEphemeralAsPurged(ids)
     }
 
+    fun getAllEphemeralItems(): List<TriageItem> {
+        return items.value.filter { it.retention == RetentionClass.EPHEMERAL_PURGE && !it.isPurged }
+    }
+
     fun getApiKey(): String = repository.getApiKey()
     fun isAutoCopyOtpEnabled(): Boolean = repository.isAutoCopyOtpEnabled()
     fun isMonitoringActive(): Boolean = repository.isMonitoringActive()

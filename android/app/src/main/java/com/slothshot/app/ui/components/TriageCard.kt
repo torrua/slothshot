@@ -213,7 +213,8 @@ fun TriageCard(
                         text = item.primaryActionLabel,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
