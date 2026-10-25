@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 import re
 import urllib.parse
 from typing import List, Optional, Tuple
@@ -95,8 +96,13 @@ Always provide relevant hashtags in the "tags" array (e.g. #shopping, #server, #
                 logger.warning(f"Could not initialize Google GenAI client: {e}")
 
     @trace_agent_span(op="ai.gemma.extract", description="Gemma 2 Multimodal Semantic Extraction")
-    def extract_from_text(self, ocr_text: str, filename: str) -> Tuple[ContentCategory, ExtractedEntities, List[str], str]:
-        """Perform semantic extraction and tagging on OCR text + metadata."""
+    def extract_from_text(
+        self,
+        ocr_text: str,
+        filename: str,
+        image_path: Optional[Path] = None,
+    ) -> Tuple[ContentCategory, ExtractedEntities, List[str], str]:
+        """Perform semantic extraction and tagging on OCR text + metadata + optional image."""
         if self.client:
             try:
                 prompt = (
@@ -104,9 +110,18 @@ Always provide relevant hashtags in the "tags" array (e.g. #shopping, #server, #
                     f"Screenshot Filename: {filename}\n"
                     f"Extracted OCR Text Content:\n\"\"\"\n{ocr_text}\n\"\"\""
                 )
+                contents = [prompt]
+                if image_path and Path(image_path).exists():
+                    try:
+                        from PIL import Image
+                        pil_img = Image.open(image_path)
+                        contents = [pil_img, prompt]
+                    except Exception as img_err:
+                        logger.warning(f"Failed to load image for multimodal inference: {img_err}")
+
                 response = self.client.models.generate_content(
                     model=settings.gemma_model_name,
-                    contents=prompt,
+                    contents=contents,
                 )
                 if response and response.text:
                     cleaned_json = self._clean_json_response(response.text)
@@ -205,11 +220,21 @@ Always provide relevant hashtags in the "tags" array (e.g. #shopping, #server, #
         # Universal Takeaway
         if data.get("takeaway"):
             t_data = data["takeaway"]
-            actions = [SmartAction(**a) for a in t_data.get("actions", [])]
+            actions = []
+            for a in t_data.get("actions", []):
+                try:
+                    if isinstance(a, dict) and "label" in a and "value" in a:
+                        actions.append(SmartAction(
+                            action_type=a.get("action_type", "search"),
+                            label=str(a["label"]),
+                            value=str(a["value"]),
+                        ))
+                except Exception:
+                    pass
             entities.takeaway = UniversalTakeaway(
-                headline=t_data.get("headline", entities.raw_summary),
-                summary=t_data.get("summary", entities.raw_summary),
-                key_facts=t_data.get("key_facts", {}),
+                headline=str(t_data.get("headline", entities.raw_summary)),
+                summary=str(t_data.get("summary", entities.raw_summary)),
+                key_facts={str(k): str(v) for k, v in t_data.get("key_facts", {}).items()} if isinstance(t_data.get("key_facts"), dict) else {},
                 actions=actions,
             )
         else:

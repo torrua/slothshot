@@ -213,3 +213,100 @@ async def get_audio_briefing():
     if audio_path.exists():
         return FileResponse(str(audio_path), media_type="audio/mpeg", filename="sloth_briefing.mp3")
     return {"message": text}
+
+
+class GeminiKeyRequest(BaseModel):
+    api_key: str
+    model_name: Optional[str] = "gemini-2.5-flash"
+
+
+@app.get("/api/settings")
+async def get_settings_status():
+    """Get current AI engine configuration status."""
+    has_gemini = bool(settings.gemini_api_key and settings.gemini_api_key.strip())
+    masked = None
+    if has_gemini:
+        k = settings.gemini_api_key.strip()
+        masked = f"{k[:4]}...{k[-4:]}" if len(k) > 8 else "****"
+
+    return {
+        "gemini_configured": has_gemini,
+        "gemini_masked_key": masked,
+        "model_name": settings.gemma_model_name,
+        "engine_mode": f"{settings.gemma_model_name} (Multimodal Cloud AI)" if has_gemini else "Local Offline (RapidOCR + TabPFN + Heuristics)",
+        "offline_ready": True,
+    }
+
+
+@app.post("/api/settings/gemini-key")
+async def update_gemini_key(req: GeminiKeyRequest):
+    """Save and activate Gemini API key, persisting to .env."""
+    key = req.api_key.strip()
+    if not key:
+        settings.gemini_api_key = None
+        engine.gemma = GemmaSemanticExtractor(api_key=None)
+        return {"status": "cleared", "mode": "Local Offline"}
+
+    # Validate key by initializing client and performing a test call
+    try:
+        from google import genai
+        test_client = genai.Client(api_key=key)
+        model = req.model_name or settings.gemma_model_name or "gemini-2.5-flash"
+        test_res = test_client.models.generate_content(
+            model=model,
+            contents="Say 'OK' in one word.",
+        )
+        logger.info(f"Gemini API key validation response: {getattr(test_res, 'text', 'OK').strip()}")
+    except Exception as e:
+        logger.warning(f"Gemini key validation failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid Gemini API Key or connection error: {e}")
+
+    settings.gemini_api_key = key
+    if req.model_name:
+        settings.gemma_model_name = req.model_name
+    engine.gemma = GemmaSemanticExtractor(api_key=key)
+
+    # Persist to .env
+    env_file = settings.base_dir / ".env"
+    try:
+        lines = []
+        if env_file.exists():
+            with open(env_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        new_lines = []
+        key_found = False
+        model_found = False
+        for line in lines:
+            if line.startswith("GEMINI_API_KEY="):
+                new_lines.append(f"GEMINI_API_KEY={key}\n")
+                key_found = True
+            elif line.startswith("GEMMA_MODEL_NAME="):
+                new_lines.append(f"GEMMA_MODEL_NAME={settings.gemma_model_name}\n")
+                model_found = True
+            else:
+                new_lines.append(line)
+        if not key_found:
+            new_lines.append(f"GEMINI_API_KEY={key}\n")
+        if not model_found:
+            new_lines.append(f"GEMMA_MODEL_NAME={settings.gemma_model_name}\n")
+        with open(env_file, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
+    except Exception as env_err:
+        logger.warning(f"Could not persist .env: {env_err}")
+
+    return {
+        "status": "success",
+        "message": f"Gemini API Key activated with model {settings.gemma_model_name}!",
+        "engine_mode": f"{settings.gemma_model_name} (Multimodal Cloud AI)",
+    }
+
+
+@app.post("/api/reprocess-all")
+async def reprocess_all_screenshots():
+    """Re-analyze all screenshots using the active AI engine."""
+    results = engine.process_directory(settings.screenshots_dir)
+    return {
+        "status": "success",
+        "reprocessed_count": len(results),
+        "engine_mode": "Gemini Multimodal" if settings.gemini_api_key else "Local Offline",
+    }

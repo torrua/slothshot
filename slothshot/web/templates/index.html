@@ -37,6 +37,11 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <button id="btn-settings" onclick="openSettingsModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition">
+          <span id="gemini-status-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <i class="fa-solid fa-key"></i>
+          <span class="hidden sm:inline">Gemini AI</span>
+        </button>
         <button id="btn-audio" onclick="playAudioBriefing()" class="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 text-xs font-medium flex items-center gap-1.5 transition">
           <i class="fa-solid fa-volume-high"></i>
           <span class="hidden sm:inline">Sloth Voice</span>
@@ -584,8 +589,221 @@
       }
     }
 
+    async function checkSettingsStatus() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        const dot = document.getElementById('gemini-status-dot');
+        const modalDot = document.getElementById('modal-status-dot');
+        const modalTitle = document.getElementById('modal-status-title');
+        const modalDesc = document.getElementById('modal-status-desc');
+        const masked = document.getElementById('modal-masked-key');
+
+        if (data.gemini_configured) {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50';
+          modalDot.className = 'w-3 h-3 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50';
+          modalTitle.innerText = 'Connected: ' + data.engine_mode;
+          modalDesc.innerText = 'Multimodal cloud AI understanding active';
+          masked.innerText = data.gemini_masked_key;
+          masked.classList.remove('hidden');
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+          modalDot.className = 'w-3 h-3 rounded-full bg-amber-400';
+          modalTitle.innerText = 'Active: Local Offline Engine';
+          modalDesc.innerText = 'RapidOCR ONNX + TabPFN heuristic parser (0 cloud keys)';
+          masked.classList.add('hidden');
+        }
+        if (data.model_name) {
+          document.getElementById('select-model').value = data.model_name;
+        }
+      } catch (err) {
+        console.error('Settings fetch error:', err);
+      }
+    }
+
+    function openSettingsModal() {
+      checkSettingsStatus();
+      const modal = document.getElementById('settings-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSettingsModal() {
+      const modal = document.getElementById('settings-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function toggleKeyVisibility() {
+      const inp = document.getElementById('input-gemini-key');
+      const icon = document.getElementById('key-vis-icon');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+      } else {
+        inp.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+      }
+    }
+
+    async function saveGeminiKey() {
+      const key = document.getElementById('input-gemini-key').value.trim();
+      const model = document.getElementById('select-model').value;
+      if (!key) {
+        showToast('Please enter a Gemini API Key');
+        return;
+      }
+      const btn = document.getElementById('btn-save-key');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+      try {
+        const res = await fetch('/api/settings/gemini-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key, model_name: model })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Gemini Connected!');
+          document.getElementById('input-gemini-key').value = '';
+          checkSettingsStatus();
+        } else {
+          alert('Error connecting Gemini: ' + (data.detail || 'Invalid key'));
+        }
+      } catch (err) {
+        alert('Connection error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Save & Connect</span>';
+      }
+    }
+
+    async function clearGeminiKey() {
+      if (!confirm('Disconnect Gemini API key and switch to Local Offline mode?')) return;
+      try {
+        await fetch('/api/settings/gemini-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: '', model_name: 'gemini-2.5-flash' })
+        });
+        showToast('Switched to Local Offline mode');
+        checkSettingsStatus();
+      } catch (err) {
+        console.error('Clear key error:', err);
+      }
+    }
+
+    async function reprocessAllScreenshots() {
+      showToast('Re-analyzing all screenshots with active engine...');
+      try {
+        const res = await fetch('/api/reprocess-all', { method: 'POST' });
+        const data = await res.json();
+        showToast(`Analyzed ${data.reprocessed_count} screenshots!`);
+        closeSettingsModal();
+        loadData();
+      } catch (err) {
+        console.error('Reprocess error:', err);
+      }
+    }
+
     // Auto-load on startup
     loadData();
+    checkSettingsStatus();
   </script>
+
+  <!-- Gemini AI Settings Modal -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-100">AI Intelligence Engine</h3>
+            <p class="text-xs text-slate-400">Gemini 2.5 Flash / Gemma 2 Multimodal Settings</p>
+          </div>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-200 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Current Engine Status -->
+      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span id="modal-status-dot" class="w-3 h-3 rounded-full bg-amber-400"></span>
+          <div>
+            <div id="modal-status-title" class="text-xs font-semibold text-slate-200">Checking engine...</div>
+            <div id="modal-status-desc" class="text-[11px] text-slate-400">Local rapid OCR + TabPFN heuristic baseline</div>
+          </div>
+        </div>
+        <span id="modal-masked-key" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 hidden"></span>
+      </div>
+
+      <!-- How it Works Note -->
+      <div class="text-xs text-slate-300 bg-sky-950/30 border border-sky-800/40 rounded-xl p-3 space-y-1">
+        <div class="font-semibold text-sky-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-info"></i> How SlothShot Understands Content:
+        </div>
+        <p class="text-slate-400 leading-relaxed text-[11px]">
+          <strong>1. Local Offline Mode (0 keys):</strong> RapidOCR ONNX extracts full text in 60ms on CPU, TabPFN calculates retention probability, and heuristics extract key-value facts.<br>
+          <strong>2. Gemini Cloud Mode (with Key):</strong> Gemini 2.5 Flash analyzes full visual layout + text, generates natural language takeaways, suggests 1-click actions (search/copy), and auto-tags content.
+        </p>
+      </div>
+
+      <!-- Key Input -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-medium text-slate-300">Google Gemini API Key</label>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-emerald-400 hover:underline flex items-center gap-1">
+            <span>Get Free Key</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+        </div>
+        <div class="relative">
+          <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 pr-9 outline-none transition">
+          <button type="button" onclick="toggleKeyVisibility()" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-200 text-xs">
+            <i id="key-vis-icon" class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-500">Stored in your local instance (.env), never shared.</p>
+      </div>
+
+      <!-- Model Select -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-medium text-slate-300">Model</label>
+        <select id="select-model" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none transition">
+          <option value="gemini-2.5-flash">gemini-2.5-flash (Recommended: Ultra-fast & Multimodal)</option>
+          <option value="gemini-2.0-flash">gemini-2.0-flash (General Multimodal)</option>
+          <option value="gemma-2-9b-it">gemma-2-9b-it (Google Gemma 2 Instruction)</option>
+        </select>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="clearGeminiKey()" class="px-3 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl transition">
+          Disconnect Key
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeSettingsModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 rounded-xl transition">
+            Close
+          </button>
+          <button id="btn-save-key" onclick="saveGeminiKey()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-check"></i>
+            <span>Save & Connect</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Re-process Prompt -->
+      <div id="reprocess-banner" class="border-t border-slate-800 pt-3 flex items-center justify-between">
+        <span class="text-xs text-slate-400">Re-analyze all screenshots with active engine?</span>
+        <button onclick="reprocessAllScreenshots()" class="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 rounded-lg text-xs font-medium transition flex items-center gap-1">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>Re-analyze All</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

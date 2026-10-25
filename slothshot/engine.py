@@ -131,7 +131,9 @@ class SlothEngine:
         tabpfn_retention, tabpfn_score = self.tabpfn.predict(features)
 
         # 4. Gemma 2 Semantic Extraction & Auto-Tagging
-        category, entities, tags, suggested_name = self.gemma.extract_from_text(ocr_text, image_path.name)
+        category, entities, tags, suggested_name = self.gemma.extract_from_text(
+            ocr_text, image_path.name, image_path=image_path
+        )
         entities.raw_content = ocr_text
 
         # 5. Dual Consensus Reconciliation
