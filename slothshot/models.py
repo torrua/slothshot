@@ -144,6 +144,7 @@ class ExtractedEntities(BaseModel):
     locations: List[LocationEntity] = Field(default_factory=list)
     events: List[EventEntity] = Field(default_factory=list)
     takeaway: Optional[UniversalTakeaway] = None
+    raw_content: Optional[str] = Field(default=None, description="Complete raw OCR text extracted from screenshot")
     raw_summary: str = Field(default="", description="1-line summary of what the screenshot is")
 
 
@@ -184,6 +185,7 @@ class TriageResult(BaseModel):
     
     # Actionable extracted data
     entities: ExtractedEntities
+    raw_content: Optional[str] = Field(default=None, description="Full raw OCR text extracted from the screenshot")
     suggested_filename: str
     
     # Sloth metrics

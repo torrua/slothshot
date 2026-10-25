@@ -132,6 +132,7 @@ class SlothEngine:
 
         # 4. Gemma 2 Semantic Extraction & Auto-Tagging
         category, entities, tags, suggested_name = self.gemma.extract_from_text(ocr_text, image_path.name)
+        entities.raw_content = ocr_text
 
         # 5. Dual Consensus Reconciliation
         # If actionable entities are found (e.g. movie, book, app, wifi, tracking),
@@ -172,6 +173,7 @@ class SlothEngine:
             gemma_reasoning=entities.raw_summary,
             tags=tags,
             entities=entities,
+            raw_content=ocr_text,
             suggested_filename=suggested_name,
             bytes_can_be_reclaimed=reclaimable_bytes,
             estimated_seconds_saved=75,
