@@ -3,6 +3,7 @@ package com.slothshot.app.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.slothshot.app.ai.QwenModelState
 import com.slothshot.app.data.TriageMetrics
 import com.slothshot.app.data.TriageRepository
 import com.slothshot.app.model.RetentionClass
@@ -14,6 +15,7 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = TriageRepository.getInstance(application)
+    private val qwenModelManager = repository.qwenModelManager
 
     val items = repository.itemsFlow
     val filter = MutableStateFlow<FilterType>(FilterType.All)
@@ -21,6 +23,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val rawContentItem = MutableStateFlow<TriageItem?>(null)
     val fullScreenImageItem = MutableStateFlow<TriageItem?>(null)
     val showSettings = MutableStateFlow(false)
+
+    val qwenModelState: StateFlow<QwenModelState> = qwenModelManager.stateFlow
 
     val metrics = items.map { repository.getMetrics() }
         .stateIn(
@@ -68,6 +72,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getApiKey(): String = repository.getApiKey()
     fun isAutoCopyOtpEnabled(): Boolean = repository.isAutoCopyOtpEnabled()
     fun isMonitoringActive(): Boolean = repository.isMonitoringActive()
+
+    fun startQwenDownload() {
+        qwenModelManager.startDownload()
+    }
+
+    fun cancelQwenDownload() {
+        qwenModelManager.cancelDownload()
+    }
+
+    fun deleteQwenModel() {
+        qwenModelManager.deleteModel()
+    }
 
     fun updateSettings(apiKey: String, autoCopy: Boolean, monitoring: Boolean) {
         repository.setApiKey(apiKey)

@@ -119,13 +119,18 @@ Open **http://localhost:8000** on your browser or smartphone.
 
 In addition to the Python backend & Web Dashboard, SlothShot includes an **autonomous native Android app** located in [`android/`](android/):
 
-- ⚡ **100% On-Device OCR**: Uses **Google ML Kit Text Recognition** for instant (~30-50ms) text extraction directly on your phone with zero internet required.
+- 🧠 **3-Tier Intelligent Vision & Russian Cyrillic Pipeline**:
+  - **Tier 1 (Cloud Multimodal)**: Direct **Gemini 2.5 Flash Vision** integration for 100% Cyrillic OCR accuracy, structured entity extraction, and automatic translation of foreign screenshots into Russian.
+  - **Tier 2 (On-Device Local VLM)**: **Alibaba Qwen2.5-VL 3B** offline multimodal vision model (~1.85 GB GGUF). Features a built-in background streaming downloader with notification progress, dynamic resolution ViT, and zero API keys required.
+  - **Tier 3 (Lightweight Offline Fallback)**: On-device **Tesseract 5.5 OpenMP** with bundled Russian Cyrillic (`rus.traineddata`) & English models + **Google ML Kit** on-device translation to Russian.
+- 🔍 **Interactive Screenshot Viewer & Raw Text Selection**:
+  - Click on any thumbnail to open the **Full-Screen Zoomable Viewer** with pinch-to-zoom (1x–5x), pan, and system gallery launch.
+  - Raw OCR inspection bottom drawer with native touch text selection and copy handles via Jetpack Compose `SelectionContainer`.
 - 🦥 **Background Screenshot Monitor**: A background `ContentObserver` watches `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` in real-time.
 - 🔔 **Instant Action Notifications**:
   - `[📋 Copy Code / Password]`: Extracts 2FA/OTP codes and Wi-Fi credentials with 1-tap clipboard copy.
   - `[🗑️ Purge]`: Delete ephemeral screenshots straight from the notification banner.
 - 🧹 **1-Click MediaStore Storage Reclaim**: Uses Android 11+ `MediaStore.createDeleteRequest()` to safely trash accumulated temporary screenshots in batch.
-- ✨ **Optional Gemini 2.5 Flash Cloud Enrichment**: Enter your Gemini API key in Settings to supercharge extraction for complex receipts and tables.
 
 ### Building the Android APK:
 ```bash

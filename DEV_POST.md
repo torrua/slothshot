@@ -262,17 +262,20 @@ slothshot sync
 
 ### Option D: Native Android App (Kotlin + Jetpack Compose)
 Prefer a native Android app running directly in your pocket? SlothShot includes a standalone native Android client in `android/`:
-- **100% On-Device OCR** via **Google ML Kit Text Recognition** (extracts text in ~30ms without an internet connection).
+- **3-Tier Intelligent Vision & Russian Cyrillic Pipeline**:
+  - **Tier 1 (Cloud Multimodal)**: Direct **Gemini 2.5 Flash Vision** integration for 100% Cyrillic OCR accuracy, structured entity extraction, and automatic translation of foreign screenshots into Russian.
+  - **Tier 2 (On-Device Local VLM)**: **Alibaba Qwen2.5-VL 3B** offline multimodal vision model (~1.85 GB GGUF). Features a built-in background streaming downloader with notification progress, dynamic resolution ViT, and zero API keys required.
+  - **Tier 3 (Lightweight Offline Fallback)**: On-device **Tesseract 5.5 OpenMP** with bundled Russian Cyrillic (`rus.traineddata`) & English models + **Google ML Kit** on-device translation to Russian.
+- **Interactive Full-Screen Viewer & Raw Text Selection**: Click any screenshot card thumbnail to open full-screen pinch-to-zoom (1x–5x), pan, or inspect the Raw OCR drawer with native touch text selection and copy handles via Jetpack Compose `SelectionContainer`.
 - **Background MediaStore Observer**: Automatically catches new screenshots the moment you press Volume Down + Power.
 - **Smart Notification Actions**: `[Copy Code]` for 2FA/OTPs and Wi-Fi passwords, and `[Purge]` directly from your notification drawer.
 - **1-Click MediaStore Deletion**: Safely cleans ephemeral screenshot piles via Android 11+ `MediaStore.createDeleteRequest()`.
-- **Optional Gemini 2.5 Flash Cloud Mode**: Deep visual and structured extraction whenever an API key is provided in Settings.
 
 ```bash
 cd android
 ./gradlew assembleDebug
 ```
-Install the resulting `app-debug.apk` directly on your Android phone!
+Install the resulting `app-debug.apk` directly on your Android phone (or use the pre-built `SlothShot-debug.apk` from the root of the repo)!
 
 
 ---

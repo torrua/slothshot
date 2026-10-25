@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
                 val rawContentItem by viewModel.rawContentItem.collectAsState()
                 val fullScreenImageItem by viewModel.fullScreenImageItem.collectAsState()
                 val showSettings by viewModel.showSettings.collectAsState()
+                val qwenModelState by viewModel.qwenModelState.collectAsState()
 
                 Scaffold(
                     topBar = {
@@ -110,6 +111,14 @@ class MainActivity : ComponentActivity() {
                                 val ephemeralItems = items.filter { it.retention == RetentionClass.EPHEMERAL_PURGE && !it.isPurged }
                                 requestPurge(ephemeralItems)
                             }
+                        )
+
+                        // On-Device VLM Card (Alibaba Qwen2.5-VL 3B)
+                        QwenModelStatusCard(
+                            modelState = qwenModelState,
+                            onStartDownload = { viewModel.startQwenDownload() },
+                            onCancelDownload = { viewModel.cancelQwenDownload() },
+                            onDeleteModel = { viewModel.deleteQwenModel() }
                         )
 
                         // Filter Pills
