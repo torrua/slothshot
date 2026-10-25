@@ -72,7 +72,16 @@ flowchart TD
 
 ## 🚀 Quickstart
 
-### 1. Installation
+### 1. Run with Docker (Recommended)
+
+```bash
+git clone https://github.com/torrua/slothshot.git
+cd slothshot
+docker compose up -d
+```
+Open **http://localhost:8000** in your browser.
+
+### 2. Local Python Installation
 
 ```bash
 git clone https://github.com/torrua/slothshot.git
@@ -81,7 +90,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### 2. Generate Sample Screenshots for Demo
+### 3. Generate Sample Screenshots for Demo
 
 ```bash
 python examples/generate_samples.py data/screenshots

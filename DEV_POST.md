@@ -1,8 +1,8 @@
 ---
 title: "SlothShot: How I Used Gemma 2 & TabPFN to Triage 1,800 Android Screenshots While Napping"
 published: false
-description: "A zero-effort Android screenshot butler powered by Google Gemma 2, Prior Labs TabPFN, Sentry Agent Tracing, ElevenLabs, and Render that turns gallery clutter into an actionable second brain."
-tags: devchallenge, hf26challenge, hacktoberfest, opensource
+description: "A zero-effort Android screenshot butler powered by Google Gemma 2, Prior Labs TabPFN, Sentry Agent Tracing, ElevenLabs, and Docker that turns gallery clutter into an actionable second brain."
+tags: hf26challenge, devchallenge, opensource, gemma
 canonical_url: https://github.com/torrua/slothshot
 cover_image: https://raw.githubusercontent.com/torrua/slothshot/main/assets/cover.png
 ---
@@ -26,6 +26,8 @@ If you are like me, your photo gallery is an absolute digital graveyard:
 * A Wi-Fi password scribbled on a café napkin? You were too lazy to re-type it -> **Screenshot**.
 * A friend recommended an obscure sci-fi movie on Netflix? Too lazy to open your notes app -> **Screenshot**.
 * A book mentioned in a tweet thread? -> **Screenshot**.
+* A clothing tag with size, fabric, and article code to buy later? -> **Screenshot**.
+* A cloud server IP, specs, and root password from a hosting control panel? -> **Screenshot**.
 * A 2FA single-use verification code, a live courier delivery map, a flight boarding pass, an Uber Eats receipt? -> **Screenshot, screenshot, screenshot.**
 
 Over two years, that pile grew to **1,842 files** named `Screenshot_20261025-142211.png` hogging **4.7 Gigabytes** of storage. 
@@ -45,15 +47,17 @@ Meet **SlothShot**.
 Instead of treating screenshots like dumb static images to be hoarded forever, SlothShot runs a **Dual-Brain Open AI Pipeline**:
 
 1. **Prior Labs TabPFN (Tabular Foundation Model)**: Analyzes structural image metadata (dimensions, aspect ratio, text density, burst frequency) to predict the screenshot's *lifecycle retention policy* (`EXTRACT_AND_PURGE`, `ARCHIVE_WITH_TAGS`, or `EPHEMERAL_JUNK`) without training.
-2. **Google DeepMind Gemma 2**: Reads the semantic content, identifies the underlying intent, and extracts structured, 1-click actionable artifacts:
+2. **Google DeepMind Gemma 2 / Gemini 2.5 Flash**: Inspects visual layouts and text, understands the underlying intent without rigid schemas, and extracts structured, 1-click actionable artifacts:
    - 🎬 **Movies & Series**: Title, year, director -> Generates instant links to **IMDb** & **Letterboxd**.
    - 📚 **Books**: Title, author, genre -> Generates instant links to **Goodreads** & **Google Books**.
    - 📱 **Apps & Repos**: Application names -> Generates search links to **Google Play Store** & **GitHub**.
    - 📶 **Wi-Fi Credentials**: Extracts SSID & Password with a 1-click **Copy to Clipboard** button.
    - 📦 **Package Tracking**: Extracts tracking number & carrier with a direct tracking URL.
-   - 🧾 **Receipts**: Extracts merchant, total amount, and date for tax records.
-3. **The Sloth Payoff (1-Click Purge)**: Because the actionable data (Wi-Fi password, movie title, promo code) is now safely indexed, **the original 4MB screenshot is safe to delete**.
-4. **ElevenLabs Sleepy Audio Briefing**: While you take a nap, your Sloth butler reads you a gentle, calming audio briefing of everything it organized and purged.
+   - 🧾 **Receipts & Invoices**: Extracts merchant, total amount, and date for tax records.
+   - ✨ **Universal Takeaways for Any Screenshot**: Extracts the core essence from clothes tags, cloud VPS specs, food recipes, or lecture slides with dynamic `Key: Value` highlights and smart action buttons (Google Search, Copy).
+3. **Full Raw OCR Transcript (`raw_content`)**: Every single character read by RapidOCR is preserved in full, accessible via a collapsible drawer with a 1-click **Copy All Text** button.
+4. **The Sloth Payoff (1-Click Purge)**: Because the actionable data (Wi-Fi password, movie title, promo code) is now safely indexed, **the original 4MB screenshot is safe to delete**.
+5. **ElevenLabs Sleepy Audio Briefing**: While you take a nap, your Sloth butler reads you a gentle, calming audio briefing of everything it organized and purged.
 
 ---
 
@@ -64,12 +68,13 @@ flowchart TD
     Android["📱 Android Phone<br/>(ADB USB / Wi-Fi Sync or Gallery Upload)"] --> Ingest["📥 SlothShot Ingestion Engine"]
 
     subgraph Dual_AI["🧠 Dual-Brain Open AI Pipeline"]
-        Ingest --> OCR["RapidOCR Engine (ONNX)<br/>Local Multilingual Character & Layout Extraction"]
+        Ingest --> OCR["RapidOCR Engine (ONNX)<br/>Local Multilingual Character & Layout Extraction (60ms)"]
+        OCR --> RAW["📄 Full raw_content OCR Retention<br/>(100% transcript + 1-click Copy button)"]
         OCR --> Features["Tabular Feature Extractor<br/>(File Size, Aspect Ratio, Density, Burst Delta)"]
         
         Features --> TabPFN["TabPFN (Prior Labs Foundation Model)<br/>Zero-Shot Bayesian Retention Prediction<br/>(Extract & Purge vs Archive vs Junk)"]
         
-        OCR --> Gemma["Gemma 2 (Google DeepMind)<br/>Multimodal Semantic Entity Parsing & Auto-Tagging<br/>(#movie, #book, #wifi, #app, #tracking)"]
+        OCR --> Gemma["Gemma 2 / Gemini 2.5 Flash<br/>Schema-Free Universal Takeaways & Auto-Tagging<br/>(Movies, Books, Wi-Fi, Tech, Products, Tags)"]
         
         TabPFN & Gemma --> Decision["⚖️ Consensus & Reconciliation Engine"]
     end
@@ -107,18 +112,17 @@ TabPFN instantly determines:
 - Burst screenshot + low text density -> `EPHEMERAL_JUNK`
 - Single card + QR / credentials -> `EXTRACT_AND_PURGE`
 
-### 2. Google Gemma 2 for Semantic Entity Extraction & Auto-Tagging
-Once TabPFN defines the structural intent, **Gemma 2** inspects the OCR layout and extracts actionable entities into a strictly typed Pydantic schema:
+### 2. Google Gemma 2 & Gemini 2.5 Flash: Schema-Free Universal Extraction
+Predefined schemas break when users screenshot unforeseen content: clothing tags, cloud VPS specs, nutritional labels, or Wi-Fi captive portals.
+
+SlothShot implements a **Schema-Free Universal Takeaway Architecture**:
 
 ```python
-class ExtractedEntities(BaseModel):
-    movies: List[MovieEntity]      # Title, IMDb & Letterboxd URLs
-    books: List[BookEntity]        # Title, Goodreads & Google Books URLs
-    apps: List[AppEntity]          # Name, Play Store & GitHub URLs
-    wifi: Optional[WifiEntity]     # SSID, Password, Security
-    tracking: List[TrackingEntity] # Carrier, Tracking #, ParcelsApp URL
-    receipt: Optional[ReceiptEntity]
-    tags: List[str]                # #movie, #scifi, #wifi, #tools
+class UniversalTakeaway(BaseModel):
+    headline: str               # Core subject in 3-7 words (e.g. Salewa Ortles Down Jacket)
+    summary: str                # 1-2 sentence distillation of why you captured it
+    key_facts: Dict[str, str]   # Dynamic attributes: {Size: XL, Fabric: GORE-TEX, Model: NH19PJ020}
+    actions: List[SmartAction]  # 1-click actions: Search on Google, Copy IP/Credentials
 ```
 
 When someone shares a screenshot of a sci-fi recommendation, Gemma extracts:
@@ -127,7 +131,11 @@ When someone shares a screenshot of a sci-fi recommendation, Gemma extracts:
 * **Direct Links:** `https://www.imdb.com/find/?q=Dune+Part+Two` and `https://letterboxd.com/search/Dune+Part+Two/`
 * **Suggested Filename:** `movie_dune_part_two_2024.png`
 
-You never have to Google the movie later or wonder what that screenshot was about.
+And when a photo of a Naturehike camping gear tag is captured:
+* **Headline:** *Naturehike Sleeping Bag Compression Bag*
+* **Key Facts:** `{Model: NH19PJ020, Size: Φ24x40cm, Fabric: 300D Oxford Cloth, Hotline: 400-090-0906}`
+* **Actions:** `[Search Google: Naturehike NH19PJ020]`
+* **Full OCR:** Available in the collapsible `raw_content` accordion with 1-click copy.
 
 ---
 
@@ -143,6 +151,7 @@ Here are the real metrics from my test batch of **50 Android screenshots**:
 | **Phone Storage Reclaimed** | 0 MB (kept out of procrastination) | **148.6 Megabytes** | **~3.5 GB per year** |
 | **Wi-Fi Credentials Retrieved** | 4 mins hunting & manual typing | **1 click** (Copy Password) | **99% faster** |
 | **Looking up Saved Movies/Books** | 10 mins searching gallery | **Instant tag filter** (`#movie`) | **No forgotten recommendations** |
+| **Arbitrary Specs / Clothes Tags** | Squinting at blurry text | **Dynamic Key-Value Grid** | **Instant 1-click search** |
 | **Expired 2FA / OTP Junk Deleted** | Left forever in gallery | **1-Click Bulk Purge** | **100% clean photo roll** |
 
 ---
@@ -183,42 +192,34 @@ Could this have been built with a proprietary cloud API like ChatGPT or Claude? 
 
 ---
 
-## 🚀 How to Try It Yourself
+## 🚀 How to Run It in 60 Seconds
 
-### 1. Clone & Install
+### Option A: 1-Click Docker (Recommended)
 ```bash
 git clone https://github.com/torrua/slothshot.git
 cd slothshot
+docker compose up -d
+```
+Open **http://localhost:8000** in your browser.
+
+### Option B: Local Python Setup
+```bash
 pip install -r requirements.txt
 pip install -e .
-```
-
-### 2. Generate Demo Screenshots
-```bash
-python examples/generate_samples.py data/screenshots
-```
-
-### 3. Scan or Sync from Android
-```bash
-# Scan local folder
-slothshot scan data/screenshots
-
-# Or connect Android phone via USB and sync directly:
-slothshot sync
-```
-
-### 4. Launch the Mobile PWA UI
-```bash
 slothshot serve --port 8000
 ```
-Open `http://localhost:8000` on your phone or desktop. Install it to your Android homescreen as a standalone PWA!
+
+### Option C: Sync Directly from Connected Android Phone
+```bash
+slothshot sync
+```
 
 ---
 
 ## 🏆 Partner Categories Checklist
 
-- [x] **Featured: Best Use of Gemma** ($200) — Multimodal semantic extraction of movies, books, apps, Wi-Fi, and auto-tagging.
-- [x] **Featured: Best Use of TabPFN** ($200) — Tabular foundation model for zero-shot screenshot retention classification.
+- [x] **Featured: Best Use of Gemma** ($200) — Multimodal semantic extraction of movies, books, apps, Wi-Fi, arbitrary items, and auto-tagging.
+- [x] **Featured: Best Use of TabPFN** ($200) — Prior Labs tabular foundation model for zero-shot screenshot retention classification.
 - [x] **Featured: Best Use of Render** ($200) — Cloud deployment configuration via `render.yaml`.
 - [x] **Partner: Best Use of Sentry Agent Tracing** ($100) — Distributed span tracing across OCR, TabPFN, and Gemma pipelines.
 - [x] **Partner: Best Use of ElevenLabs** ($100) — Calming, sleepy voice debriefings.
