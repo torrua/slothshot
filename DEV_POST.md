@@ -181,6 +181,31 @@ In the Sentry dashboard, you can see real-time performance traces, model confide
 
 ---
 
+## ☁️ 1-Click Cloud Deployment with Render
+
+SlothShot includes an Infrastructure-as-Code blueprint in [`render.yaml`](https://github.com/torrua/slothshot/blob/main/render.yaml) for instant zero-configuration deployment to **Render's Free Web Service tier**:
+
+```yaml
+services:
+  - type: web
+    name: slothshot
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python examples/generate_samples.py data/screenshots"
+    startCommand: "uvicorn slothshot.web.app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SENTRY_DSN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+```
+
+You can fork the repo and launch a private instance on Render in 60 seconds with SSL, continuous deployment, and zero server maintenance.
+
+---
+
 ## 🌐 Open Innovation: Why Open Source AI Matters Here
 
 Could this have been built with a proprietary cloud API like ChatGPT or Claude? Sure. But here is why **Open-Source AI and open-weight models are fundamentally superior** for this use case:
