@@ -242,38 +242,59 @@ Always provide relevant hashtags in the "tags" array (e.g. #shopping, #server, #
             tags.extend(["#junk", "#otp", "#temporary"])
             return finalize(ContentCategory.EPHEMERAL_JUNK, f"junk_{clean_name}.png")
 
-        # 2. Shopping / Clothes / Product Tags (e.g. Salewa, Куртка, Артикул, Размер)
+        # 2. Shopping / Clothes / Product Tags (e.g. Salewa, Naturehike, Куртка, Артикул, Размер)
         is_product = (
             any(w in text_lower for w in [
                 "артикул", "aptwkyn", "aptwky", "размер", "pa3mep", "куртка", "kyptka",
-                "salewa", "обувь", "одежда", "шорты", "штаны", "ботинки"
+                "salewa", "naturehike", "обувь", "одежда", "шорты", "штаны", "ботинки",
+                "qualification certificate", "certificate", "bearing load"
             ])
-            or bool(re.search(r"\b(?:sku|barcode)\b", text_lower))
+            or bool(re.search(r"\b(?:sku|barcode|model\s*no)\b", text_lower))
             or (bool(re.search(r"\bproduct\b", text_lower)) and "productivity" not in text_lower and not any(w in text_lower for w in ["app", "install", "play store", "github"]))
         )
         if is_product:
-            prod_match = re.search(r"(?:наименование|название|куртка|kyptka|модель|product)[\s:]*([^\n\r]+)", text, re.IGNORECASE)
-            name = prod_match.group(1).strip() if prod_match else "Salewa Ortles Gtx Pro Stretch"
-            if len(name) < 3 or ("salewa" in text_lower and "salewa" not in name.lower()):
-                name = f"Salewa {name}".strip()
+            raw_facts = self._extract_key_values_from_text(text)
+            brand = raw_facts.get("Brand") or raw_facts.get("Бренд") or ("Salewa" if "salewa" in text_lower else None)
 
-            sku_match = re.search(r"(?:артикул|aptwkyn|aptwky|sku)[\s:]*([0-9A-Z _-]+)", text, re.IGNORECASE)
-            sku = sku_match.group(1).strip() if sku_match else None
+            # Product Name
+            prod_name_candidate = (
+                raw_facts.get("Product Name") or raw_facts.get("Product") or
+                raw_facts.get("Наименование") or raw_facts.get("Название")
+            )
+            if not prod_name_candidate:
+                prod_match = re.search(r"(?:наименование|название|куртка|kyptka|модель|product(?:\s+name)?)[\s:]*([^\n\r]+)", text, re.IGNORECASE)
+                prod_name_candidate = prod_match.group(1).strip() if prod_match else "Product Item"
 
-            size_match = re.search(r"(?:размер|pa3mep|size)[\s:]*([A-Z0-9:]+)", text, re.IGNORECASE)
-            size = size_match.group(1).strip() if size_match else None
+            # Clean candidate of prefix words like "Name: "
+            prod_name_candidate = re.sub(r"^(?:name|product name|название|наименование)[\s:]*", "", prod_name_candidate, flags=re.IGNORECASE).strip()
 
-            encoded = urllib.parse.quote_plus(name)
+            name = prod_name_candidate
+            if brand and brand.lower() not in name.lower():
+                name = f"{brand} {name}"
+
+            sku = raw_facts.get("ModelNo") or raw_facts.get("Model No") or raw_facts.get("Model") or raw_facts.get("Артикул") or raw_facts.get("SKU")
+            if not sku:
+                sku_match = re.search(r"(?:артикул|aptwkyn|aptwky|sku|model\s*no)[\s:.]*([0-9A-Z _-]+)", text, re.IGNORECASE)
+                sku = sku_match.group(1).strip() if sku_match else None
+
+            size = raw_facts.get("Size") or raw_facts.get("Размер")
+            if not size:
+                size_match = re.search(r"(?:размер|pa3mep|size)[\s:.]*([^\n\r]+)", text, re.IGNORECASE)
+                size = size_match.group(1).strip() if size_match else None
+
+            encoded = urllib.parse.quote_plus(f"{name} {sku or ''}".strip())
             entities.products.append(ProductEntity(
                 name=name,
-                brand="Salewa" if "salewa" in text_lower else None,
+                brand=brand,
                 sku_or_article=sku,
                 size_or_variant=size,
                 search_url=f"https://www.google.com/search?q={encoded}",
                 market_search_url=f"https://market.yandex.ru/search?text={encoded}",
             ))
-            entities.raw_summary = f"Shopping/Product wishlist: '{name}' {f'({size})' if size else ''}"
-            tags.extend(["#product", "#shopping", "#wishlist", "#clothes"])
+            entities.raw_summary = f"Товар: '{name}' {f'({size})' if size else ''}"
+            tags.extend(["#product", "#shopping", "#wishlist"])
+            if brand:
+                tags.append(f"#{self._slugify(brand)}")
             return finalize(ContentCategory.SHOPPING_PRODUCT, f"product_{self._slugify(name)}.png")
 
         # 3. Cloud / Server / IT Hosting
@@ -423,22 +444,59 @@ Always provide relevant hashtags in the "tags" array (e.g. #shopping, #server, #
                 tags.append(f"#{clean_w}")
         return ContentCategory.OTHER, entities, tags, f"note_{self._slugify(takeaway.headline)}.png"
 
+    @staticmethod
+    def _extract_key_values_from_text(text: str) -> dict:
+        """Extract all natural 'Key: Value' pairs present in OCR text."""
+        facts = {}
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or ":" not in line:
+                continue
+            if re.match(r"^\d{1,2}:\d{2}", line) or line.startswith(("http:", "https:")):
+                continue
+            k, v = line.split(":", 1)
+            k = k.strip().rstrip(". -_")
+            v = v.strip()
+            if 2 <= len(k) <= 30 and 1 <= len(v) <= 80:
+                if k.lower() not in ["http", "https", "time"]:
+                    facts[k] = v
+        return facts
+
     def _synthesize_universal_takeaway(self, category: ContentCategory, entities: ExtractedEntities, text: str, filename: str) -> UniversalTakeaway:
         """Synthesize a schema-free UniversalTakeaway for any category or arbitrary content."""
         facts: dict = {}
         actions: List[SmartAction] = []
         clean_name = filename.rsplit(".", 1)[0]
+        raw_facts = self._extract_key_values_from_text(text)
+        facts.update(raw_facts)
 
         if entities.products:
             p = entities.products[0]
             headline = p.name
             summary = entities.raw_summary or f"Товар / вещь для покупки: {p.name}"
-            if p.brand: facts["Бренд"] = p.brand
-            if p.size_or_variant: facts["Размер"] = p.size_or_variant
-            if p.sku_or_article: facts["Артикул"] = p.sku_or_article
-            if p.search_url: actions.append(SmartAction(action_type="search", label="Google Search", value=p.search_url))
-            if p.market_search_url: actions.append(SmartAction(action_type="search", label="Яндекс Маркет", value=p.market_search_url))
-            if p.sku_or_article: actions.append(SmartAction(action_type="copy", label="Скопировать артикул", value=p.sku_or_article))
+            if p.brand and "Brand" not in facts and "Бренд" not in facts:
+                facts["Бренд"] = p.brand
+            if p.size_or_variant and "Size" not in facts and "Размер" not in facts:
+                facts["Размер"] = p.size_or_variant
+            if p.sku_or_article and "Model" not in facts and "ModelNo" not in facts and "Артикул" not in facts:
+                facts["Артикул"] = p.sku_or_article
+
+            # Barcode check
+            barcode_m = re.search(r"\b(\d{12,14})\b", text)
+            if barcode_m and "Штрихкод" not in facts:
+                facts["Штрихкод"] = barcode_m.group(1)
+
+            if p.search_url:
+                actions.append(SmartAction(action_type="search", label="Google Search", value=p.search_url))
+            if p.market_search_url:
+                actions.append(SmartAction(action_type="search", label="Яндекс Маркет", value=p.market_search_url))
+            if p.sku_or_article:
+                actions.append(SmartAction(action_type="copy", label=f"Скопировать модель/SKU", value=p.sku_or_article))
+            if barcode_m:
+                actions.append(SmartAction(action_type="copy", label=f"Штрихкод: {barcode_m.group(1)}", value=barcode_m.group(1)))
+            if "Hotline" in raw_facts:
+                actions.append(SmartAction(action_type="copy", label=f"Телефон: {raw_facts['Hotline']}", value=raw_facts['Hotline']))
+
             return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
 
         if entities.tech:
