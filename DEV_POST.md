@@ -30,7 +30,7 @@ If you are like me, your photo gallery is an absolute digital graveyard:
 * A cloud server IP, specs, and root password from a hosting control panel? -> **Screenshot**.
 * A 2FA single-use verification code, a live courier delivery map, a flight boarding pass, an Uber Eats receipt? -> **Screenshot, screenshot, screenshot.**
 
-Over two years, that pile grew to **1,842 files** named `Screenshot_20261025-142211.png` hogging **4.7 Gigabytes** of storage. 
+Over two years, that pile grew to **1,842 files** with cryptic timestamp names like `Screenshot_YYYYMMDD-HHMMSS.png`, **hogging 4.7 Gigabytes** of storage. 
 
 Nobody ever sorts them. Finding that one receipt or the Wi-Fi password for your local coffee shop means 20 minutes of soul-crushing doom-scrolling through a wall of unindexed pixels.
 
@@ -44,17 +44,17 @@ Meet **SlothShot**.
 
 **SlothShot** is a mobile-first second brain and automated triage butler for Android screenshots. 
 
-Instead of treating screenshots like dumb static images to be hoarded forever, SlothShot runs a **Dual-Brain Open AI Pipeline**:
+Instead of treating screenshots like dumb static images to hoard forever, SlothShot runs a **Dual-Brain Open AI Pipeline**:
 
-1. **Prior Labs TabPFN (Tabular Foundation Model)**: Analyzes structural image metadata (dimensions, aspect ratio, text density, burst frequency) to predict the screenshot's *lifecycle retention policy* (`EXTRACT_AND_PURGE`, `ARCHIVE_WITH_TAGS`, or `EPHEMERAL_JUNK`) without training.
-2. **Google DeepMind Gemma 2 / Gemini 2.5 Flash**: Inspects visual layouts and text, understands the underlying intent without rigid schemas, and extracts structured, 1-click actionable artifacts:
+1. **Prior Labs TabPFN (Tabular Foundation Model)**: Looks at the structural shape of each image (dimensions, aspect ratio, text density, burst frequency) and figures out what to do with it — whether it's safe to purge after extracting the data, worth archiving with clean tags, or temporary junk to toss immediately. No model training required.
+2. **Google DeepMind Gemma 2 / Gemini 2.5 Flash**: Looks at the screenshot and pulls out whatever you actually captured it for, without forcing anything into rigid predefined categories:
    - 🎬 **Movies & Series**: Title, year, director -> Generates instant links to **IMDb** & **Letterboxd**.
    - 📚 **Books**: Title, author, genre -> Generates instant links to **Goodreads** & **Google Books**.
    - 📱 **Apps & Repos**: Application names -> Generates search links to **Google Play Store** & **GitHub**.
    - 📶 **Wi-Fi Credentials**: Extracts SSID & Password with a 1-click **Copy to Clipboard** button.
    - 📦 **Package Tracking**: Extracts tracking number & carrier with a direct tracking URL.
    - 🧾 **Receipts & Invoices**: Extracts merchant, total amount, and date for tax records.
-   - ✨ **Universal Takeaways for Any Screenshot**: Extracts the core essence from clothes tags, cloud VPS specs, food recipes, or lecture slides with dynamic `Key: Value` highlights and smart action buttons (Google Search, Copy).
+   - ✨ **Universal Takeaways for Any Screenshot**: Pulls out the core facts from clothing tags, cloud VPS specs, cooking recipes, or lecture slides with dynamic `Key: Value` highlights and smart action buttons (Google Search, Copy).
 3. **Full Raw OCR Transcript (`raw_content`)**: Every single character read by RapidOCR is preserved in full, accessible via a collapsible drawer with a 1-click **Copy All Text** button.
 4. **The Sloth Payoff (1-Click Purge)**: Because the actionable data (Wi-Fi password, movie title, promo code) is now safely indexed, **the original 4MB screenshot is safe to delete**.
 5. **ElevenLabs Sleepy Audio Briefing**: While you take a nap, your Sloth butler reads you a gentle, calming audio briefing of everything it organized and purged.
@@ -134,9 +134,9 @@ TabPFN instantly determines:
 - Single card + QR / credentials -> `EXTRACT_AND_PURGE`
 
 ### 2. Google Gemma 2 & Gemini 2.5 Flash: Schema-Free Universal Extraction
-Predefined schemas break when users screenshot unforeseen content: clothing tags, cloud VPS specs, nutritional labels, or Wi-Fi captive portals.
+Predefined categories always break the moment you screenshot something unexpected — like a clothing tag, cloud server specs, a recipe, or a nutrition label.
 
-SlothShot implements a **Schema-Free Universal Takeaway Architecture**:
+Instead of forcing everything into rigid models, SlothShot extracts the universal essence of any capture:
 
 ```python
 class UniversalTakeaway(BaseModel):
