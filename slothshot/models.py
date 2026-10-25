@@ -34,6 +34,20 @@ class ContentCategory(str, Enum):
     OTHER = "other"
 
 
+class SmartAction(BaseModel):
+    action_type: str = Field(default="search", description="search | copy | link")
+    label: str = Field(description="Button label text")
+    value: str = Field(description="URL to open or text to copy")
+
+
+class UniversalTakeaway(BaseModel):
+    """Universal schema-free semantic essence of any captured screenshot."""
+    headline: str = Field(description="Core subject / title in 3-7 words")
+    summary: str = Field(description="Why the user captured it / main takeaway in 1-2 sentences")
+    key_facts: Dict[str, str] = Field(default_factory=dict, description="Dynamic key-value highlights")
+    actions: List[SmartAction] = Field(default_factory=list, description="Dynamic smart actions (1-click search, copy, open)")
+
+
 class ProductEntity(BaseModel):
     name: str = Field(description="Product, clothes, or item name")
     brand: Optional[str] = Field(default=None, description="Brand name if visible")
@@ -129,6 +143,7 @@ class ExtractedEntities(BaseModel):
     promos: List[PromoEntity] = Field(default_factory=list)
     locations: List[LocationEntity] = Field(default_factory=list)
     events: List[EventEntity] = Field(default_factory=list)
+    takeaway: Optional[UniversalTakeaway] = None
     raw_summary: str = Field(default="", description="1-line summary of what the screenshot is")
 
 

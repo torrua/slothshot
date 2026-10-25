@@ -198,8 +198,63 @@
         // Entity Action Section
         let entitySection = '';
 
-        // Movie
-        if (item.entities.movies && item.entities.movies.length > 0) {
+        // 1. Universal Takeaway Section (Unified Schema-Free Essence)
+        if (item.entities.takeaway && item.entities.takeaway.headline) {
+          const t = item.entities.takeaway;
+          const factsEntries = Object.entries(t.key_facts || {});
+          
+          let factsHtml = '';
+          if (factsEntries.length > 0) {
+            factsHtml = `
+              <div class="grid grid-cols-2 gap-1.5 my-2.5 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 text-xs">
+                ${factsEntries.map(([k, v]) => `
+                  <div class="truncate">
+                    <span class="text-slate-400 text-[11px]">${k}:</span>
+                    <span class="text-emerald-400 font-medium font-mono text-[11px] ml-1">${v}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          }
+
+          let actionsHtml = '';
+          if (t.actions && t.actions.length > 0) {
+            actionsHtml = `
+              <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                ${t.actions.map(a => {
+                  if (a.action_type === 'copy') {
+                    return `
+                      <button onclick="copyToClipboard('${a.value}', '${a.label} скопировано!')" class="px-2.5 py-1 rounded bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 text-xs font-semibold border border-sky-500/30 flex items-center gap-1.5 transition">
+                        <i class="fa-regular fa-copy"></i> ${a.label}
+                      </button>
+                    `;
+                  } else {
+                    return `
+                      <a href="${a.value}" target="_blank" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> ${a.label}
+                      </a>
+                    `;
+                  }
+                }).join('')}
+              </div>
+            `;
+          }
+
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-amber-400 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-sparkles"></i> <strong>${t.headline}</strong>
+                </span>
+              </div>
+              <div class="text-[12px] text-slate-400 mt-1 leading-snug">
+                ${t.summary}
+              </div>
+              ${factsHtml}
+              ${actionsHtml}
+            </div>
+          `;
+        } else if (item.entities.movies && item.entities.movies.length > 0) {
           const m = item.entities.movies[0];
           entitySection = `
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">

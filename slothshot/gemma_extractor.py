@@ -33,8 +33,10 @@ from slothshot.models import (
     ProductEntity,
     PromoEntity,
     ReceiptEntity,
+    SmartAction,
     TechEntity,
     TrackingEntity,
+    UniversalTakeaway,
     WifiEntity,
 )
 from slothshot.telemetry import trace_agent_span
@@ -45,27 +47,36 @@ logger = logging.getLogger("slothshot.gemma")
 class GemmaSemanticExtractor:
     """Multimodal semantic intelligence powered by Google DeepMind's Gemma 2 architecture."""
 
-    SYSTEM_PROMPT = """You are SlothShot's Gemma 2 Semantic Extraction Engine.
-Your task is to analyze an Android screenshot (text + visual layout) and extract all actionable data that the user captured it for, so they never have to transcribe or search for it again.
+    SYSTEM_PROMPT = """You are SlothShot's Universal Semantic Extraction Engine powered by Gemma 2.
+Your task is to analyze an Android screenshot and extract the universal core essence of whatever the user captured it for, so they never have to transcribe or search for it again.
 
 Analyze the screenshot and return a strictly valid JSON object matching this schema:
 {
-  "category": "movie" | "book" | "app" | "wifi" | "tracking" | "receipt" | "travel" | "promo" | "address" | "meme" | "dev" | "junk" | "other",
+  "category": "movie" | "book" | "app" | "product" | "server" | "wifi" | "tracking" | "receipt" | "travel" | "promo" | "address" | "meme" | "dev" | "junk" | "other",
   "tags": ["#tag1", "#tag2", ...],
   "suggested_filename": "clean_snake_case_descriptive_name.png",
   "raw_summary": "Short 1-line description of screenshot purpose",
+  "takeaway": {
+    "headline": "Core subject or title in 3-7 words (e.g. Salewa Ortles Jacket / London Cloud Server / Pasta Recipe)",
+    "summary": "Why the user saved this screenshot and what is the key takeaway (1-2 sentences)",
+    "key_facts": {
+      "AttributeName": "AttributeValue"
+    },
+    "actions": [
+      {"action_type": "search", "label": "Google: ...", "value": "https://..."},
+      {"action_type": "copy", "label": "Copy ...", "value": "..."}
+    ]
+  },
   "movies": [{"title": "...", "year": "...", "director_or_creator": "...", "streaming_service": "..."}],
   "books": [{"title": "...", "author": "...", "genre_or_topic": "..."}],
   "apps": [{"name": "...", "platform": "Android", "category": "..."}],
+  "products": [{"name": "...", "brand": "...", "sku_or_article": "...", "size_or_variant": "..."}],
   "wifi": {"ssid": "...", "password": "...", "security_type": "WPA/WPA2"} | null,
   "tracking": [{"tracking_number": "...", "carrier": "..."}],
   "receipt": {"vendor": "...", "amount": 12.50, "currency": "USD", "date": "YYYY-MM-DD", "category": "..."} | null,
-  "promos": [{"code": "...", "discount_details": "...", "store_or_service": "...", "expires_at": "..."}],
-  "locations": [{"address": "..."}],
-  "events": [{"title": "...", "date_time": "...", "booking_reference": "..."}],
   "is_ephemeral_junk": true | false
 }
-Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book, #wifi, #receipt, #sale).
+Always provide relevant hashtags in the "tags" array (e.g. #shopping, #server, #recipe, #movie, #code).
 """
 
     def __init__(self, api_key: Optional[str] = None):
@@ -191,6 +202,19 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
                     tracking_url=f"https://parcelsapp.com/en/tracking/{track_num}",
                 ))
 
+        # Universal Takeaway
+        if data.get("takeaway"):
+            t_data = data["takeaway"]
+            actions = [SmartAction(**a) for a in t_data.get("actions", [])]
+            entities.takeaway = UniversalTakeaway(
+                headline=t_data.get("headline", entities.raw_summary),
+                summary=t_data.get("summary", entities.raw_summary),
+                key_facts=t_data.get("key_facts", {}),
+                actions=actions,
+            )
+        else:
+            entities.takeaway = self._synthesize_universal_takeaway(category, entities, data.get("raw_summary", ""), filename)
+
         return category, entities, tags, suggested_name
 
     def _offline_semantic_parse(self, text: str, filename: str) -> Tuple[ContentCategory, ExtractedEntities, List[str], str]:
@@ -199,6 +223,10 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
         entities = ExtractedEntities()
         text_lower = text.lower()
         clean_name = filename.rsplit(".", 1)[0]
+
+        def finalize(cat: ContentCategory, suggested: str) -> Tuple[ContentCategory, ExtractedEntities, List[str], str]:
+            entities.takeaway = self._synthesize_universal_takeaway(cat, entities, text, filename)
+            return cat, entities, tags, suggested
 
         # 1. Ephemeral Junk Detection (check FIRST so OTPs with "code" don't trigger Promo)
         # Note: Must use word boundaries for short acronyms like 'otp', '2fa' so words like 'pocmotp' (просмотр) don't trigger!
@@ -212,7 +240,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
         if is_junk:
             entities.raw_summary = "Ephemeral single-use notification/code (Safe to delete)"
             tags.extend(["#junk", "#otp", "#temporary"])
-            return ContentCategory.EPHEMERAL_JUNK, entities, tags, f"junk_{clean_name}.png"
+            return finalize(ContentCategory.EPHEMERAL_JUNK, f"junk_{clean_name}.png")
 
         # 2. Shopping / Clothes / Product Tags (e.g. Salewa, Куртка, Артикул, Размер)
         is_product = (
@@ -246,7 +274,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             ))
             entities.raw_summary = f"Shopping/Product wishlist: '{name}' {f'({size})' if size else ''}"
             tags.extend(["#product", "#shopping", "#wishlist", "#clothes"])
-            return ContentCategory.SHOPPING_PRODUCT, entities, tags, f"product_{self._slugify(name)}.png"
+            return finalize(ContentCategory.SHOPPING_PRODUCT, f"product_{self._slugify(name)}.png")
 
         # 3. Cloud / Server / IT Hosting
         if any(w in text_lower for w in ["cloudserver", "ubuntu", "serverlocation", "operatingsystem", "хостинг", "vps", "vds"]):
@@ -270,7 +298,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             )
             entities.raw_summary = f"Cloud server configuration: '{srv_name}' ({srv_loc}, {srv_os})"
             tags.extend(["#server", "#cloud", "#hosting", "#tech"])
-            return ContentCategory.TECH_SERVER, entities, tags, f"server_{self._slugify(srv_name)}.png"
+            return finalize(ContentCategory.TECH_SERVER, f"server_{self._slugify(srv_name)}.png")
 
         # 4. Wi-Fi Credentials Pattern
         # Only trigger if "wifi" / "wi-fi" / "network" is explicitly present
@@ -292,7 +320,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             entities.wifi = WifiEntity(ssid=ssid, password=password)
             entities.raw_summary = f"Wi-Fi Network credentials for '{ssid}'"
             tags.extend(["#wifi", "#credentials", "#internet"])
-            return ContentCategory.WIFI_CREDENTIALS, entities, tags, f"wifi_{self._slugify(ssid)}.png"
+            return finalize(ContentCategory.WIFI_CREDENTIALS, f"wifi_{self._slugify(ssid)}.png")
 
         # 5. Movie / TV Show Recommendation
         movie_match = re.search(r"(?:movie|film|series|show|directed by|starring)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
@@ -307,7 +335,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             ))
             entities.raw_summary = f"Movie recommendation: '{title}'"
             tags.extend(["#movie", "#cinema", "#watchlist"])
-            return ContentCategory.MEDIA_MOVIE, entities, tags, f"movie_{self._slugify(title)}.png"
+            return finalize(ContentCategory.MEDIA_MOVIE, f"movie_{self._slugify(title)}.png")
 
         # 6. Book Recommendation
         book_match = re.search(r"Book:[\s:]*([^\n\r]+)", text, re.IGNORECASE)
@@ -328,7 +356,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             ))
             entities.raw_summary = f"Book recommendation: '{title}'"
             tags.extend(["#book", "#reading", "#library"])
-            return ContentCategory.MEDIA_BOOK, entities, tags, f"book_{self._slugify(title)}.png"
+            return finalize(ContentCategory.MEDIA_BOOK, f"book_{self._slugify(title)}.png")
 
         # 5. App / Game Recommendation
         app_match = re.search(r"(?:app|application|download|install|github)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
@@ -342,7 +370,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             ))
             entities.raw_summary = f"App recommendation: '{app_name}'"
             tags.extend(["#app", "#android", "#tools"])
-            return ContentCategory.MEDIA_APP, entities, tags, f"app_{self._slugify(app_name)}.png"
+            return finalize(ContentCategory.MEDIA_APP, f"app_{self._slugify(app_name)}.png")
 
         # 6. Package Tracking
         track_match = re.search(r"\b([A-Z0-9]{10,24})\b", text)
@@ -355,7 +383,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             ))
             entities.raw_summary = f"Package tracking for shipment #{track_num}"
             tags.extend(["#tracking", "#parcel", "#delivery"])
-            return ContentCategory.PACKAGE_TRACKING, entities, tags, f"tracking_{track_num}.png"
+            return finalize(ContentCategory.PACKAGE_TRACKING, f"tracking_{track_num}.png")
 
         # 7. Receipts / Expenses
         price_match = re.search(r"[\$€£₽]?\s*([0-9]+[.,][0-9]{2})\s*[\$€£₽]?", text)
@@ -372,7 +400,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             entities.receipt = ReceiptEntity(vendor=vendor, amount=amt)
             entities.raw_summary = f"Receipt from {vendor} for ${amt:.2f}"
             tags.extend(["#receipt", "#expense", "#finance"])
-            return ContentCategory.FINANCE_RECEIPT, entities, tags, f"receipt_{self._slugify(vendor)}_{amt}.png"
+            return finalize(ContentCategory.FINANCE_RECEIPT, f"receipt_{self._slugify(vendor)}_{amt}.png")
 
         # 8. Promo codes (Must be uppercase/alphanumeric, not common stop words)
         promo_match = re.search(r"(?:promo|coupon)[\s:]+([A-Z0-9_-]{4,15})", text, re.IGNORECASE)
@@ -382,12 +410,175 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             entities.promos.append(PromoEntity(code=code))
             entities.raw_summary = f"Promo discount code '{code}'"
             tags.extend(["#promo", "#discount", "#shopping"])
-            return ContentCategory.PROMO_CODE, entities, tags, f"promo_{code.lower()}.png"
+            return finalize(ContentCategory.PROMO_CODE, f"promo_{code.lower()}.png")
 
-        # Fallback General
-        entities.raw_summary = "General captured screenshot"
-        tags.extend(["#screenshot", "#notes"])
-        return ContentCategory.OTHER, entities, tags, f"note_{clean_name}.png"
+        # Fallback General / Arbitrary Screenshot (Universal Schema-Free Essence)
+        takeaway = self._extract_arbitrary_takeaway(text, clean_name)
+        entities.takeaway = takeaway
+        entities.raw_summary = takeaway.summary
+        tags.extend(["#notes", "#screenshot"])
+        for w in takeaway.headline.split():
+            clean_w = re.sub(r"[^\w]", "", w).lower()
+            if len(clean_w) > 3 and f"#{clean_w}" not in tags and len(tags) < 6:
+                tags.append(f"#{clean_w}")
+        return ContentCategory.OTHER, entities, tags, f"note_{self._slugify(takeaway.headline)}.png"
+
+    def _synthesize_universal_takeaway(self, category: ContentCategory, entities: ExtractedEntities, text: str, filename: str) -> UniversalTakeaway:
+        """Synthesize a schema-free UniversalTakeaway for any category or arbitrary content."""
+        facts: dict = {}
+        actions: List[SmartAction] = []
+        clean_name = filename.rsplit(".", 1)[0]
+
+        if entities.products:
+            p = entities.products[0]
+            headline = p.name
+            summary = entities.raw_summary or f"Товар / вещь для покупки: {p.name}"
+            if p.brand: facts["Бренд"] = p.brand
+            if p.size_or_variant: facts["Размер"] = p.size_or_variant
+            if p.sku_or_article: facts["Артикул"] = p.sku_or_article
+            if p.search_url: actions.append(SmartAction(action_type="search", label="Google Search", value=p.search_url))
+            if p.market_search_url: actions.append(SmartAction(action_type="search", label="Яндекс Маркет", value=p.market_search_url))
+            if p.sku_or_article: actions.append(SmartAction(action_type="copy", label="Скопировать артикул", value=p.sku_or_article))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.tech:
+            s = entities.tech
+            headline = s.name
+            summary = entities.raw_summary or f"Конфигурация сервера: {s.name}"
+            if s.location: facts["Локация"] = s.location
+            if s.specs: facts["ОС / Спецификации"] = s.specs
+            if s.price: facts["Тариф"] = s.price
+            encoded = urllib.parse.quote_plus(s.name)
+            actions.append(SmartAction(action_type="search", label="Поиск сервера в Google", value=f"https://www.google.com/search?q={encoded}"))
+            actions.append(SmartAction(action_type="copy", label="Скопировать параметры", value=f"{s.name} {s.location or ''} {s.specs or ''}".strip()))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.wifi:
+            w = entities.wifi
+            headline = f"Wi-Fi: {w.ssid}"
+            summary = f"Данные для подключения к беспроводной сети '{w.ssid}'"
+            facts["Сеть (SSID)"] = w.ssid
+            facts["Пароль"] = w.password
+            actions.append(SmartAction(action_type="copy", label="Скопировать пароль", value=w.password))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.movies:
+            m = entities.movies[0]
+            headline = f"Фильм: {m.title}"
+            summary = entities.raw_summary or f"Рекомендация фильма: {m.title}"
+            if m.year: facts["Год"] = m.year
+            if m.director_or_creator: facts["Режиссёр"] = m.director_or_creator
+            if m.imdb_search_url: actions.append(SmartAction(action_type="search", label="IMDb", value=m.imdb_search_url))
+            if m.letterboxd_search_url: actions.append(SmartAction(action_type="search", label="Letterboxd", value=m.letterboxd_search_url))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.books:
+            b = entities.books[0]
+            headline = f"Книга: {b.title}"
+            summary = entities.raw_summary or f"Рекомендация книги: {b.title}"
+            if b.author: facts["Автор"] = b.author
+            if b.goodreads_search_url: actions.append(SmartAction(action_type="search", label="Goodreads", value=b.goodreads_search_url))
+            if b.google_books_url: actions.append(SmartAction(action_type="search", label="Google Books", value=b.google_books_url))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.apps:
+            a = entities.apps[0]
+            headline = f"Приложение: {a.name}"
+            summary = entities.raw_summary or f"Рекомендация приложения: {a.name}"
+            facts["Платформа"] = "Android"
+            if a.play_store_url: actions.append(SmartAction(action_type="search", label="Google Play", value=a.play_store_url))
+            if a.github_url: actions.append(SmartAction(action_type="search", label="GitHub", value=a.github_url))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.tracking:
+            t = entities.tracking[0]
+            headline = f"Посылка #{t.tracking_number}"
+            summary = f"Отслеживание почтового отправления {t.tracking_number}"
+            facts["Трек-номер"] = t.tracking_number
+            if t.carrier: facts["Служба доставки"] = t.carrier
+            actions.append(SmartAction(action_type="link", label="Отследить посылку", value=t.tracking_url or f"https://parcelsapp.com/en/tracking/{t.tracking_number}"))
+            actions.append(SmartAction(action_type="copy", label="Скопировать номер", value=t.tracking_number))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if entities.receipt:
+            r = entities.receipt
+            headline = f"Чек: {r.vendor}"
+            summary = f"Квитанция об оплате на сумму ${r.amount:.2f}"
+            facts["Продавец"] = r.vendor
+            facts["Сумма"] = f"${r.amount:.2f}"
+            actions.append(SmartAction(action_type="search", label="Поиск магазина", value=f"https://www.google.com/search?q={urllib.parse.quote_plus(r.vendor)}"))
+            return UniversalTakeaway(headline=headline, summary=summary, key_facts=facts, actions=actions)
+
+        if category == ContentCategory.EPHEMERAL_JUNK:
+            return UniversalTakeaway(
+                headline="Одноразовое уведомление / код",
+                summary="Временный код авторизации или системное оповещение (рекомендуется удалить)",
+                key_facts={"Статус": "Безопасно для удаления"},
+                actions=[]
+            )
+
+        # UNIVERSAL SCHEMA-FREE FALLBACK FOR ANY ARBITRARY SCREENSHOT
+        return self._extract_arbitrary_takeaway(text, clean_name)
+
+    def _extract_arbitrary_takeaway(self, text: str, clean_name: str) -> UniversalTakeaway:
+        """Extract headline, key facts, and smart actions from any arbitrary text without predefined schemas."""
+        clean_lines: List[str] = []
+        for raw in text.splitlines():
+            l = raw.strip()
+            if not l:
+                continue
+            # Filter out status bar noise (time, battery, 5g, wifi icons)
+            filtered = re.sub(r'(?:\b\d{1,2}:\d{2}(?::\d{2})?\b|\b5g\b|\b4g\b|\blte\b|\bvolte\b|\d{1,3}%|[^\w\sа-яА-ЯёЁ])', ' ', l, flags=re.IGNORECASE).strip()
+            if len(filtered) >= 3:
+                clean_lines.append(l)
+
+        headline = clean_lines[0][:60] if clean_lines else f"Заметка ({clean_name})"
+        facts: dict = {}
+        for l in clean_lines:
+            if ":" in l:
+                parts = l.split(":", 1)
+                k, v = parts[0].strip(), parts[1].strip()
+                if 2 <= len(k) <= 25 and len(v) > 0 and len(facts) < 6:
+                    facts[k] = v
+
+        # Extract dates / prices / urls
+        dates = re.findall(r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b", text)
+        if dates and "Дата" not in facts:
+            facts["Дата"] = dates[0]
+
+        prices = re.findall(r"[\$€£₽]\s*\d+(?:[.,]\d{2})?|\d+(?:[.,]\d{2})?\s*[\$€£₽]", text)
+        if prices and "Сумма" not in facts:
+            facts["Сумма"] = prices[0]
+
+        summary = f"Сохранённая информация: {headline}"
+        if facts:
+            top_facts = ", ".join([f"{k}: {v}" for k, v in list(facts.items())[:2]])
+            summary = f"{summary} ({top_facts})"
+
+        encoded = urllib.parse.quote_plus(headline)
+        actions: List[SmartAction] = [
+            SmartAction(action_type="search", label=f"Google: {headline[:25]}", value=f"https://www.google.com/search?q={encoded}")
+        ]
+
+        # Check for URLs
+        url_match = re.search(r"(https?://[^\s]+|www\.[^\s]+)", text)
+        if url_match:
+            u = url_match.group(1)
+            if not u.startswith("http"):
+                u = "https://" + u
+            actions.append(SmartAction(action_type="link", label="Открыть ссылку", value=u))
+
+        # Check for copyable codes/emails/phones
+        code_match = re.search(r"\b([A-Z0-9_-]{8,24})\b", text)
+        if code_match:
+            actions.append(SmartAction(action_type="copy", label=f"Скопировать: {code_match.group(1)[:12]}", value=code_match.group(1)))
+
+        return UniversalTakeaway(
+            headline=headline,
+            summary=summary,
+            key_facts=facts,
+            actions=actions,
+        )
 
     @staticmethod
     def _slugify(text: str) -> str:

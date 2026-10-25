@@ -139,3 +139,21 @@ def test_no_false_positive_otp_in_russian_pocmotp(extractor):
     assert category == ContentCategory.TECH_SERVER
 
 
+def test_universal_takeaway_for_arbitrary_unmodeled_content(extractor):
+    ocr_text = """
+    14:30 5G 87%
+    Рецепт: Паста с лососем и шпинатом
+    Ингредиенты: Лосось 300г, Сливки 200мл
+    Время: 25 минут
+    Ссылка: https://eda.ru/recepty/pasta-losos
+    """
+    category, entities, tags, suggested_name = extractor.extract_from_text(ocr_text, "Screenshot_recipe.png")
+    assert entities.takeaway is not None
+    assert "Паста с лососем" in entities.takeaway.headline
+    assert len(entities.takeaway.key_facts) >= 2
+    assert len(entities.takeaway.actions) >= 1
+    action_types = [a.action_type for a in entities.takeaway.actions]
+    assert "search" in action_types or "link" in action_types
+
+
+
