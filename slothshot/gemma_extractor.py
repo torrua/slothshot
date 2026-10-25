@@ -196,11 +196,17 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
         text_lower = text.lower()
         clean_name = filename.rsplit(".", 1)[0]
 
-        # 1. Wi-Fi Credentials Pattern
-        # Matches "Wi-Fi:", "SSID:", "Network:", "Password:", "Pass:", "WPA key:"
+        # 1. Ephemeral Junk Detection (check FIRST so OTPs with "code" don't trigger Promo)
+        if any(w in text_lower for w in ["verification code", "security code", "otp", "2fa", "battery is low", "courier arriving"]):
+            entities.raw_summary = "Ephemeral single-use notification/code (Safe to delete)"
+            tags.extend(["#junk", "#otp", "#temporary"])
+            return ContentCategory.EPHEMERAL_JUNK, entities, tags, f"junk_{clean_name}.png"
+
+        # 2. Wi-Fi Credentials Pattern
+        # Only trigger if "wifi" / "wi-fi" / "network" is explicitly present
         wifi_match = re.search(r"(?:ssid|network|wifi|wi-fi)[\s:]+([^\n\r,]+)", text, re.IGNORECASE)
-        pass_match = re.search(r"(?:password|pass|pwd|key|wpa)[\s:]+([^\n\r,]+)", text, re.IGNORECASE)
-        if wifi_match or pass_match or "wi-fi" in text_lower:
+        pass_match = re.search(r"(?:password|pass|pwd|wpa[\s_-]?key|wifi[\s_-]?key)[\s:]+([^\n\r,]+)", text, re.IGNORECASE)
+        if ("wifi" in text_lower or "wi-fi" in text_lower) and (wifi_match or pass_match):
             ssid = wifi_match.group(1).strip() if wifi_match else "Guest_WiFi"
             password = pass_match.group(1).strip() if pass_match else "unknown"
             entities.wifi = WifiEntity(ssid=ssid, password=password)
@@ -208,12 +214,10 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#wifi", "#credentials", "#internet"])
             return ContentCategory.WIFI_CREDENTIALS, entities, tags, f"wifi_{self._slugify(ssid)}.png"
 
-        # 2. Movie / TV Show Recommendation
-        # Looks for phrases like "Movie:", "Series:", "Film:", "Directed by", "IMDb", "Rotten Tomatoes", "Watch on"
+        # 3. Movie / TV Show Recommendation
         movie_match = re.search(r"(?:movie|film|series|show|directed by|starring)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
         if movie_match or "imdb" in text_lower or "letterboxd" in text_lower or "netflix" in text_lower:
             title = movie_match.group(1).strip() if movie_match else "Dune Part Two"
-            # Strip extra rating text
             title = re.sub(r"\s*\(\d{4}\).*", "", title).strip()
             encoded = urllib.parse.quote_plus(title)
             entities.movies.append(MovieEntity(
@@ -225,8 +229,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#movie", "#cinema", "#watchlist"])
             return ContentCategory.MEDIA_MOVIE, entities, tags, f"movie_{self._slugify(title)}.png"
 
-        # 3. Book Recommendation
-        # Looks for "Book:", "Author:", "ISBN", "Goodreads", "Novel by"
+        # 4. Book Recommendation
         book_match = re.search(r"(?:book|novel|reading|author)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
         if book_match or "goodreads" in text_lower or "isbn" in text_lower:
             title = book_match.group(1).strip() if book_match else "Designing Data-Intensive Applications"
@@ -240,8 +243,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#book", "#reading", "#library"])
             return ContentCategory.MEDIA_BOOK, entities, tags, f"book_{self._slugify(title)}.png"
 
-        # 4. App / Game Recommendation
-        # Looks for "App:", "Play Store", "GitHub repo", "Available on iOS"
+        # 5. App / Game Recommendation
         app_match = re.search(r"(?:app|application|download|install|github)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
         if app_match or "play.google.com" in text_lower or "apk" in text_lower or "github.com" in text_lower:
             app_name = app_match.group(1).strip() if app_match else "Obsidian Notes"
@@ -255,7 +257,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#app", "#android", "#tools"])
             return ContentCategory.MEDIA_APP, entities, tags, f"app_{self._slugify(app_name)}.png"
 
-        # 5. Package Tracking
+        # 6. Package Tracking
         track_match = re.search(r"\b([A-Z0-9]{10,24})\b", text)
         if ("tracking" in text_lower or "cdek" in text_lower or "dhl" in text_lower or "usps" in text_lower or "fedex" in text_lower) and track_match:
             track_num = track_match.group(1)
@@ -268,7 +270,7 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#tracking", "#parcel", "#delivery"])
             return ContentCategory.PACKAGE_TRACKING, entities, tags, f"tracking_{track_num}.png"
 
-        # 6. Receipts / Expenses
+        # 7. Receipts / Expenses
         price_match = re.search(r"[\$€£₽]?\s*([0-9]+[.,][0-9]{2})\s*[\$€£₽]?", text)
         if ("total" in text_lower or "receipt" in text_lower or "invoice" in text_lower or "tax" in text_lower) and price_match:
             amount_str = price_match.group(1).replace(",", ".")
@@ -285,20 +287,15 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#receipt", "#expense", "#finance"])
             return ContentCategory.FINANCE_RECEIPT, entities, tags, f"receipt_{self._slugify(vendor)}_{amt}.png"
 
-        # 7. Promo codes
-        promo_match = re.search(r"(?:promo|coupon|code)[\s:]+([A-Z0-9_-]{4,15})", text, re.IGNORECASE)
-        if promo_match or "promo code" in text_lower or "% off" in text_lower:
-            code = promo_match.group(1) if promo_match else "DISCOUNT20"
+        # 8. Promo codes (Must be uppercase/alphanumeric, not common stop words)
+        promo_match = re.search(r"(?:promo|coupon)[\s:]+([A-Z0-9_-]{4,15})", text, re.IGNORECASE)
+        stop_words = {"WITH", "THIS", "THAT", "CODE", "ONLY", "YOUR", "FROM", "HAVE"}
+        if promo_match and promo_match.group(1).upper() not in stop_words:
+            code = promo_match.group(1).upper()
             entities.promos.append(PromoEntity(code=code))
             entities.raw_summary = f"Promo discount code '{code}'"
             tags.extend(["#promo", "#discount", "#shopping"])
             return ContentCategory.PROMO_CODE, entities, tags, f"promo_{code.lower()}.png"
-
-        # 8. Ephemeral Junk Detection
-        if any(w in text_lower for w in ["your verification code", "security code is", "otp", "2fa", "battery is low", "courier arriving"]):
-            entities.raw_summary = "Ephemeral single-use notification/code (Safe to delete)"
-            tags.extend(["#junk", "#otp", "#temporary"])
-            return ContentCategory.EPHEMERAL_JUNK, entities, tags, f"junk_{clean_name}.png"
 
         # Fallback General
         entities.raw_summary = "General captured screenshot"

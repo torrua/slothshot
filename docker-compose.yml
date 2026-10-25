@@ -1,0 +1,14 @@
+services:
+  slothshot:
+    build: .
+    image: slothshot:latest
+    container_name: slothshot
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - TABPFN_TOKEN=${TABPFN_TOKEN:-}
+    restart: unless-stopped

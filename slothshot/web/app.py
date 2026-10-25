@@ -50,6 +50,14 @@ static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Auto-load and triage existing screenshots on server launch."""
+    if settings.screenshots_dir.exists():
+        logger.info(f"Auto-processing screenshots in {settings.screenshots_dir}...")
+        engine.process_directory(settings.screenshots_dir)
+
+
 class MetricsSummary(BaseModel):
     total_screenshots: int
     purged_count: int
