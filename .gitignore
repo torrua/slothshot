@@ -10,3 +10,8 @@ build/
 data/trash/
 data/archive/
 .DS_Store
+
+# User personal screenshots protection (only synthetic demo samples tracked)
+data/screenshots/*
+!data/screenshots/Screenshot_20261025_*.png
+!data/screenshots/.gitkeep
