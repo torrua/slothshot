@@ -24,6 +24,7 @@ dependencies = [
     "aiofiles>=23.2.0",
     "rich>=13.7.0",
     "tabpfn>=9.0.0",
+    "google-genai>=0.1.0",
 ]
 
 [project.optional-dependencies]
