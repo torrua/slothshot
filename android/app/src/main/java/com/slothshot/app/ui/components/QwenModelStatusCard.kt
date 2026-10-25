@@ -85,7 +85,7 @@ fun QwenModelStatusCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Скачать Qwen2.5-VL 3B (~1.85 ГБ)",
+                            text = "Скачать Qwen2.5-VL 3B (~3.1 ГБ)",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp
                         )
@@ -230,7 +230,7 @@ fun QwenModelStatusCard(
 }
 
 private fun formatModelSize(bytes: Long): String {
-    if (bytes <= 0) return "1.85 ГБ"
+    if (bytes <= 0) return "3.1 ГБ"
     val gb = bytes.toDouble() / (1024 * 1024 * 1024)
     return String.format("%.2f ГБ", gb)
 }

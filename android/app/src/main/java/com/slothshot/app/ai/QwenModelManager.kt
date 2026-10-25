@@ -34,15 +34,17 @@ class QwenModelManager private constructor(context: Context) {
     private var downloadJob: Job? = null
 
     private val modelsDir = File(appContext.filesDir, "models")
-    val modelFile = File(modelsDir, "qwen2.5-vl-3b-instruct-q4_k_m.gguf")
-    val mmprojFile = File(modelsDir, "mmproj-qwen2.5-vl-3b-f16.gguf")
+    val modelFile = File(modelsDir, "Qwen2.5-VL-3B-Instruct-q4_k_m.gguf")
+    val mmprojFile = File(modelsDir, "Qwen2.5-VL-3B-Instruct-mmproj-f16.gguf")
 
     private val _stateFlow = MutableStateFlow<QwenModelState>(QwenModelState.NotDownloaded)
     val stateFlow: StateFlow<QwenModelState> = _stateFlow.asStateFlow()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(180, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build()
 
     init {
@@ -61,9 +63,9 @@ class QwenModelManager private constructor(context: Context) {
         }
 
         // Direct download mirror URLs for Qwen2.5-VL 3B GGUF
-        const val MODEL_URL = "https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/qwen2.5-vl-3b-instruct-q4_k_m.gguf"
-        const val MMPROJ_URL = "https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/mmproj-qwen2.5-vl-3b-instruct-f16.gguf"
-        const val ESTIMATED_TOTAL_MB = 1850L
+        const val MODEL_URL = "https://huggingface.co/Mungert/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-q4_k_m.gguf"
+        const val MMPROJ_URL = "https://huggingface.co/Mungert/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-mmproj-f16.gguf"
+        const val ESTIMATED_TOTAL_MB = 3100L
     }
 
     fun isModelReady(): Boolean {
@@ -85,13 +87,13 @@ class QwenModelManager private constructor(context: Context) {
         downloadJob = managerScope.launch {
             try {
                 createDownloadNotificationChannel()
-                _stateFlow.value = QwenModelState.Downloading(0, 0, ESTIMATED_TOTAL_MB, "qwen2.5-vl-3b-instruct-q4_k_m.gguf")
+                _stateFlow.value = QwenModelState.Downloading(0, 0, ESTIMATED_TOTAL_MB, "Qwen2.5-VL-3B-Instruct-q4_k_m.gguf")
 
-                // Step 1: Download Main GGUF weights
-                downloadFileWithProgress(MODEL_URL, modelFile, "qwen2.5-vl-3b-instruct-q4_k_m.gguf", 0, 85)
+                // Step 1: Download Main GGUF weights (~1.8 GB, 0-60%)
+                downloadFileWithProgress(MODEL_URL, modelFile, "Qwen2.5-VL-3B-Instruct-q4_k_m.gguf", 0, 60, isFirstFile = true)
 
-                // Step 2: Download Visual Projector
-                downloadFileWithProgress(MMPROJ_URL, mmprojFile, "mmproj-qwen2.5-vl-3b-f16.gguf", 85, 100)
+                // Step 2: Download Visual Projector (~1.25 GB, 60-100%)
+                downloadFileWithProgress(MMPROJ_URL, mmprojFile, "Qwen2.5-VL-3B-Instruct-mmproj-f16.gguf", 60, 100, isFirstFile = false)
 
                 val totalSize = modelFile.length() + mmprojFile.length()
                 _stateFlow.value = QwenModelState.Ready(modelFile.absolutePath, totalSize)
@@ -108,10 +110,13 @@ class QwenModelManager private constructor(context: Context) {
     fun cancelDownload() {
         downloadJob?.cancel()
         downloadJob = null
-        // Delete incomplete files
-        if (modelFile.exists() && !isModelReady()) {
-            modelFile.delete()
-        }
+        // Clean up partial temporary files
+        val tempModel = File(modelFile.parentFile, "${modelFile.name}.tmp")
+        val tempMmproj = File(mmprojFile.parentFile, "${mmprojFile.name}.tmp")
+        if (tempModel.exists()) tempModel.delete()
+        if (tempMmproj.exists()) tempMmproj.delete()
+        if (modelFile.exists() && !isModelReady()) modelFile.delete()
+
         _stateFlow.value = QwenModelState.NotDownloaded
         val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(2002)
@@ -129,9 +134,15 @@ class QwenModelManager private constructor(context: Context) {
         destFile: File,
         fileName: String,
         rangeStartPercent: Int,
-        rangeEndPercent: Int
+        rangeEndPercent: Int,
+        isFirstFile: Boolean
     ) = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(url).build()
+        val tempFile = File(destFile.parentFile, "${destFile.name}.tmp")
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "SlothShot-Android/1.0 (Linux; Android)")
+            .build()
+
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw Exception("HTTP ${response.code} при скачивании $fileName")
@@ -140,7 +151,7 @@ class QwenModelManager private constructor(context: Context) {
             val totalBytes = body.contentLength()
             var downloadedBytes = 0L
 
-            FileOutputStream(destFile).use { out ->
+            FileOutputStream(tempFile).use { out ->
                 val buffer = ByteArray(64 * 1024)
                 val input = body.byteStream()
                 var read: Int
@@ -156,7 +167,8 @@ class QwenModelManager private constructor(context: Context) {
                         lastUpdate = now
                         val fraction = if (totalBytes > 0) downloadedBytes.toFloat() / totalBytes else 0f
                         val mappedPercent = rangeStartPercent + (fraction * (rangeEndPercent - rangeStartPercent)).toInt()
-                        val currentDownloadedMb = (destFile.length() / (1024 * 1024))
+                        val previousBytes = if (isFirstFile) 0L else modelFile.length()
+                        val currentDownloadedMb = (previousBytes + tempFile.length()) / (1024 * 1024)
 
                         _stateFlow.value = QwenModelState.Downloading(
                             progressPercent = mappedPercent.coerceIn(0, 100),
@@ -168,6 +180,10 @@ class QwenModelManager private constructor(context: Context) {
                     }
                 }
             }
+
+            // Successfully downloaded full file -> atomically rename
+            if (destFile.exists()) destFile.delete()
+            tempFile.renameTo(destFile)
         }
     }
 
