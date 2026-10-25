@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SlothShot 🦥 Zero-Effort Android Screenshot Butler</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#10b981">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    .sloth-glow {
+      box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-16">
+
+  <!-- Sticky Top Navigation -->
+  <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-2xl shadow-lg">
+          🦥
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight flex items-center gap-2">
+            SlothShot
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HF26 AI</span>
+          </h1>
+          <p class="text-xs text-slate-400">Zero-Effort Android Screenshot Butler</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-audio" onclick="playAudioBriefing()" class="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-volume-high"></i>
+          <span class="hidden sm:inline">Sloth Voice</span>
+        </button>
+        <button id="btn-sync-adb" onclick="syncADB()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition">
+          <i class="fa-brands fa-android"></i>
+          <span>Sync Phone</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+
+    <!-- Hero / The Lazy Payoff Dashboard -->
+    <section class="bg-gradient-to-b from-slate-900 to-slate-900/60 border border-slate-800 rounded-2xl p-5 sloth-glow">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-bed"></i> The Lazy Payoff Metrics
+          </h2>
+          <p class="text-xs text-slate-400">Total cognitive load & storage reclaimed while you were napping</p>
+        </div>
+        <button onclick="purgeAllLazy()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-medium transition flex items-center gap-1">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>1-Click Purge Expired</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+          <div class="text-2xl font-black text-emerald-400" id="metric-storage">0.0 MB</div>
+          <div class="text-xs text-slate-400 mt-0.5">Reclaimed Memory</div>
+        </div>
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+          <div class="text-2xl font-black text-amber-400" id="metric-time">0 min</div>
+          <div class="text-xs text-slate-400 mt-0.5">Time Saved</div>
+        </div>
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+          <div class="text-2xl font-black text-sky-400" id="metric-media">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">Movies & Books</div>
+        </div>
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+          <div class="text-2xl font-black text-purple-400" id="metric-purged">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">Junk Purged</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upload & Ingestion Area -->
+    <section class="border-2 border-dashed border-slate-800 hover:border-emerald-500/50 bg-slate-900/40 rounded-2xl p-6 text-center transition cursor-pointer" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" class="hidden" accept="image/*" multiple onchange="handleFileUpload(event)">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 text-xl">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+      </div>
+      <h3 class="text-sm font-semibold text-slate-200">Tap to upload screenshots from your Android Gallery</h3>
+      <p class="text-xs text-slate-500 mt-1">Gemma 2 extracts movies, books, Wi-Fi, apps & tracking; TabPFN predicts retention</p>
+    </section>
+
+    <!-- Filter Pills by Tags -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none text-xs" id="tag-bar">
+      <button onclick="filterByTag('')" class="tag-btn active px-3 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold transition">All</button>
+      <button onclick="filterByTag('#movie')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🎬 #movie</button>
+      <button onclick="filterByTag('#book')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">📚 #book</button>
+      <button onclick="filterByTag('#app')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">📱 #app</button>
+      <button onclick="filterByTag('#wifi')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">📶 #wifi</button>
+      <button onclick="filterByTag('#receipt')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🧾 #receipt</button>
+      <button onclick="filterByTag('#junk')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🗑️ #junk</button>
+    </div>
+
+    <!-- Screenshots Action Cards Grid -->
+    <div id="results-grid" class="space-y-4">
+      <!-- Loading Placeholder -->
+      <div class="text-center py-12 text-slate-500">
+        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-emerald-500"></i>
+        <p class="text-xs">Loading triage cards...</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Audio Player Floating Bar (hidden by default) -->
+  <div id="audio-bar" class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-slate-900 border border-slate-700 rounded-2xl p-3 shadow-2xl hidden z-50 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm">
+        <i class="fa-solid fa-headphones"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-slate-200">Sloth Butler Audio Briefing</div>
+        <div class="text-[10px] text-slate-400">Powered by ElevenLabs</div>
+      </div>
+    </div>
+    <audio id="audio-player" controls class="h-8 max-w-[170px]"></audio>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-lg transition-all duration-300 opacity-0 pointer-events-none z-50">
+    Notification
+  </div>
+
+  <script>
+    let activeTag = '';
+
+    async function loadData() {
+      try {
+        const url = activeTag ? `/api/results?tag=${encodeURIComponent(activeTag)}` : '/api/results';
+        const res = await fetch(url);
+        const data = await res.json();
+        renderCards(data);
+        loadMetrics();
+      } catch (err) {
+        console.error('Error loading data:', err);
+      }
+    }
+
+    async function loadMetrics() {
+      try {
+        const res = await fetch('/api/metrics');
+        const m = await res.json();
+        document.getElementById('metric-storage').innerText = `${m.megabytes_reclaimed} MB`;
+        document.getElementById('metric-time').innerText = `${m.estimated_minutes_saved} min`;
+        document.getElementById('metric-media').innerText = `${m.movies_found + m.books_found}`;
+        document.getElementById('metric-purged').innerText = `${m.purged_count}`;
+      } catch (err) {
+        console.error('Metrics error:', err);
+      }
+    }
+
+    function renderCards(items) {
+      const grid = document.getElementById('results-grid');
+      if (!items || items.length === 0) {
+        grid.innerHTML = `
+          <div class="text-center py-16 bg-slate-900/30 border border-slate-800/80 rounded-2xl">
+            <div class="text-4xl mb-3">🦥</div>
+            <h3 class="text-sm font-semibold text-slate-300">Your screenshot feed is clean!</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Upload Android screenshots or sync via ADB to let TabPFN & Gemma do the thinking.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = items.map(item => {
+        const isPurged = item.status === 'purged';
+        const isArchived = item.status === 'archived';
+
+        // Retention Badge colors
+        let retBadge = '';
+        if (item.retention_class === 'extract_and_purge') {
+          retBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">Extract & Purge</span>';
+        } else if (item.retention_class === 'archive_with_tags') {
+          retBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">Archive</span>';
+        } else {
+          retBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">Ephemeral Junk</span>';
+        }
+
+        // Entity Action Section
+        let entitySection = '';
+
+        // Movie
+        if (item.entities.movies && item.entities.movies.length > 0) {
+          const m = item.entities.movies[0];
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-sky-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-film"></i> Movie: ${m.title} ${m.year ? `(${m.year})` : ''}
+              </div>
+              <div class="flex items-center gap-2 mt-2">
+                <a href="${m.imdb_search_url}" target="_blank" class="px-2.5 py-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-xs font-medium border border-yellow-500/30 flex items-center gap-1">
+                  <i class="fa-brands fa-imdb"></i> IMDb
+                </a>
+                <a href="${m.letterboxd_search_url}" target="_blank" class="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium border border-emerald-500/30 flex items-center gap-1">
+                  Letterboxd ↗
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Book
+        if (item.entities.books && item.entities.books.length > 0) {
+          const b = item.entities.books[0];
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-book"></i> Book: ${b.title} ${b.author ? `by ${b.author}` : ''}
+              </div>
+              <div class="flex items-center gap-2 mt-2">
+                <a href="${b.goodreads_search_url}" target="_blank" class="px-2.5 py-1 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 text-xs font-medium border border-amber-600/30 flex items-center gap-1">
+                  Goodreads ↗
+                </a>
+                <a href="${b.google_books_url}" target="_blank" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700">
+                  Google Books ↗
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // App
+        if (item.entities.apps && item.entities.apps.length > 0) {
+          const a = item.entities.apps[0];
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-purple-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-mobile-screen-button"></i> App: ${a.name}
+              </div>
+              <div class="flex items-center gap-2 mt-2">
+                <a href="${a.play_store_url}" target="_blank" class="px-2.5 py-1 rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 text-xs font-medium border border-teal-500/30 flex items-center gap-1">
+                  <i class="fa-brands fa-google-play"></i> Play Store
+                </a>
+                <a href="${a.github_url}" target="_blank" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 flex items-center gap-1">
+                  <i class="fa-brands fa-github"></i> GitHub
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Wi-Fi
+        if (item.entities.wifi) {
+          const w = item.entities.wifi;
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-sky-400 flex items-center justify-between">
+                <span><i class="fa-solid fa-wifi"></i> Wi-Fi: <strong>${w.ssid}</strong></span>
+                <span class="text-slate-400 font-mono text-[11px]">${w.password}</span>
+              </div>
+              <div class="mt-2">
+                <button onclick="copyToClipboard('${w.password}', 'Wi-Fi Password copied!')" class="px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5">
+                  <i class="fa-regular fa-copy"></i> Copy Password
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        // Tracking
+        if (item.entities.tracking && item.entities.tracking.length > 0) {
+          const t = item.entities.tracking[0];
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-box"></i> Tracking #${t.tracking_number}
+              </div>
+              <div class="mt-2">
+                <a href="${t.tracking_url}" target="_blank" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold inline-flex items-center gap-1.5">
+                  <i class="fa-solid fa-truck-fast"></i> Track Package ↗
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Promo
+        if (item.entities.promos && item.entities.promos.length > 0) {
+          const p = item.entities.promos[0];
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-rose-400 flex items-center justify-between">
+                <span><i class="fa-solid fa-tag"></i> Promo Code: <strong>${p.code}</strong></span>
+              </div>
+              <div class="mt-2">
+                <button onclick="copyToClipboard('${p.code}', 'Promo code copied!')" class="px-3 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5">
+                  <i class="fa-regular fa-copy"></i> Copy Promo Code
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        // Tags Pill List
+        const tagsHtml = (item.tags || []).map(t => 
+          `<span class="px-2 py-0.5 rounded-full bg-slate-800/80 text-[10px] text-slate-300 font-mono">${t}</span>`
+        ).join(' ');
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 transition ${isPurged ? 'opacity-40 line-through' : ''}">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-200">${item.file_name}</span>
+                  ${retBadge}
+                </div>
+                <p class="text-xs text-slate-400 mt-1">${item.gemma_reasoning || 'Processed by Gemma'}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] font-mono text-emerald-400 font-semibold">TabPFN ${Math.round(item.tabpfn_score * 100)}%</span>
+                <div class="text-[10px] text-slate-500">${item.file_size_kb} KB</div>
+              </div>
+            </div>
+
+            <!-- Entities Extracted -->
+            ${entitySection}
+
+            <!-- Tags -->
+            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+              ${tagsHtml}
+            </div>
+
+            <!-- Card Actions -->
+            <div class="flex items-center justify-between border-t border-slate-800/80 pt-3 mt-3">
+              <span class="text-[11px] text-slate-500 italic">Save: ~${item.estimated_seconds_saved}s cognitive load</span>
+              <div class="flex items-center gap-2">
+                ${!isPurged ? `
+                  <button onclick="purgeSingle('${item.id}')" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-medium border border-rose-500/20 transition flex items-center gap-1">
+                    <i class="fa-solid fa-trash"></i> Purge Image
+                  </button>
+                ` : '<span class="text-xs text-slate-500 font-semibold">Purged</span>'}
+
+                ${!isArchived && !isPurged ? `
+                  <button onclick="archiveSingle('${item.id}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition flex items-center gap-1">
+                    <i class="fa-solid fa-box-archive"></i> Archive
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterByTag(tag) {
+      activeTag = tag;
+      document.querySelectorAll('.tag-btn').forEach(b => {
+        b.classList.remove('active', 'bg-emerald-500', 'text-slate-950', 'font-bold');
+        b.classList.add('bg-slate-900', 'text-slate-300');
+      });
+      event.target.classList.add('active', 'bg-emerald-500', 'text-slate-950', 'font-bold');
+      loadData();
+    }
+
+    async function handleFileUpload(e) {
+      const files = e.target.files;
+      if (!files.length) return;
+      showToast(`Uploading ${files.length} screenshot(s)...`);
+
+      for (let file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          await fetch('/api/upload', { method: 'POST', body: formData });
+        } catch (err) {
+          console.error('Upload failed:', err);
+        }
+      }
+      showToast('All screenshots processed by TabPFN & Gemma!');
+      loadData();
+    }
+
+    async function syncADB() {
+      showToast('Connecting to Android via ADB...');
+      try {
+        const res = await fetch('/api/sync-adb', { method: 'POST' });
+        const data = await res.json();
+        showToast(`Pulled ${data.pulled_count} screenshot(s) from Android!`);
+        loadData();
+      } catch (err) {
+        showToast('ADB sync failed or no device attached.');
+      }
+    }
+
+    async function purgeSingle(id) {
+      try {
+        await fetch(`/api/purge/${id}`, { method: 'POST' });
+        showToast('Screenshot purged!');
+        loadData();
+      } catch (err) {
+        console.error('Purge error:', err);
+      }
+    }
+
+    async function archiveSingle(id) {
+      try {
+        await fetch(`/api/archive/${id}`, { method: 'POST' });
+        showToast('Screenshot archived with semantic name!');
+        loadData();
+      } catch (err) {
+        console.error('Archive error:', err);
+      }
+    }
+
+    async function purgeAllLazy() {
+      try {
+        const res = await fetch('/api/purge-all-lazy', { method: 'POST' });
+        const data = await res.json();
+        showToast(`Reclaimed ${data.reclaimed_mb} MB across ${data.purged_count} files!`);
+        loadData();
+      } catch (err) {
+        console.error('Purge all error:', err);
+      }
+    }
+
+    async function playAudioBriefing() {
+      showToast('Generating ElevenLabs Sloth voice briefing...');
+      const bar = document.getElementById('audio-bar');
+      const player = document.getElementById('audio-player');
+      player.src = '/api/audio-briefing?t=' + Date.now();
+      bar.classList.remove('hidden');
+      player.play();
+    }
+
+    function copyToClipboard(text, msg) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(msg);
+      });
+    }
+
+    function showToast(text) {
+      const t = document.getElementById('toast');
+      t.innerText = text;
+      t.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        t.classList.add('opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+
+    // Auto-load on startup
+    loadData();
+  </script>
+</body>
+</html>

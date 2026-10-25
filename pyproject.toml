@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slothshot"
+version = "1.0.0"
+description = "The Zero-Effort Android Screenshot Triage & Second Brain Butler powered by Gemma 2 & TabPFN"
+authors = [
+    { name = "Torrua", email = "author@torrua.dev" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.2.0",
+    "pillow>=10.0.0",
+    "rapidocr-onnxruntime>=1.2.0",
+    "sentry-sdk>=2.0.0",
+    "httpx>=0.27.0",
+    "aiofiles>=23.2.0",
+    "rich>=13.7.0",
+    "tabpfn>=9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+slothshot = "slothshot.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["slothshot*"]
+exclude = ["data*", "tests*", "examples*"]
+
