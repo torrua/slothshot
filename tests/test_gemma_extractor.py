@@ -94,3 +94,48 @@ def test_extract_ephemeral_junk(extractor):
     category, entities, tags, suggested_name = extractor.extract_from_text(ocr_text, "Screenshot_otp.png")
     assert category == ContentCategory.EPHEMERAL_JUNK
     assert "#junk" in tags
+
+
+def test_extract_product_entity(extractor):
+    ocr_text = """
+    SALEWA
+    Наименование: Куртка Salewa Ortles Gtx Pro Stretch
+    Артикул: 00-0000028436 8620
+    Размер EUR:L
+    """
+    category, entities, tags, suggested_name = extractor.extract_from_text(ocr_text, "IMG_20260403.jpg")
+    assert category == ContentCategory.SHOPPING_PRODUCT
+    assert len(entities.products) == 1
+    assert "salewa" in entities.products[0].name.lower()
+    assert entities.products[0].sku_or_article == "00-0000028436 8620"
+    assert entities.products[0].size_or_variant == "EUR:L"
+    assert "#product" in tags
+
+
+def test_extract_tech_entity(extractor):
+    ocr_text = """
+    CLOUDSERVERS-CLOUD2GB
+    ServerLocation: LONDON, UK
+    OperatingSystem: Ubuntu24.04
+    Price: $0.0136/hour
+    """
+    category, entities, tags, suggested_name = extractor.extract_from_text(ocr_text, "server_order.jpg")
+    assert category == ContentCategory.TECH_SERVER
+    assert entities.tech is not None
+    assert "CLOUDSERVERS" in entities.tech.name
+    assert "LONDON" in entities.tech.location
+    assert "#server" in tags
+
+
+def test_no_false_positive_otp_in_russian_pocmotp(extractor):
+    ocr_text = """
+    pocMOTp W onNaTa
+    CLOUDSERVERS-CLOUD2GB
+    OperatingSystem: Ubuntu24.04
+    ServerLocation: LONDON, UK
+    """
+    category, entities, tags, suggested_name = extractor.extract_from_text(ocr_text, "nvidia_overlay.jpg")
+    assert category != ContentCategory.EPHEMERAL_JUNK
+    assert category == ContentCategory.TECH_SERVER
+
+

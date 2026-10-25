@@ -137,8 +137,8 @@ class SlothEngine:
         # If actionable entities are found (e.g. movie, book, app, wifi, tracking),
         # user got the information, so screenshot can be purged or safely archived!
         has_extracted_artifacts = bool(
-            entities.movies or entities.books or entities.apps or
-            entities.wifi or entities.tracking or entities.promos
+            entities.movies or entities.books or entities.apps or entities.products or
+            entities.wifi or entities.tracking or entities.promos or entities.tech
         )
 
         final_retention = tabpfn_retention

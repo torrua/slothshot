@@ -20,6 +20,8 @@ class ContentCategory(str, Enum):
     MEDIA_MOVIE = "movie"
     MEDIA_BOOK = "book"
     MEDIA_APP = "app"
+    SHOPPING_PRODUCT = "product"
+    TECH_SERVER = "server"
     WIFI_CREDENTIALS = "wifi"
     PACKAGE_TRACKING = "tracking"
     FINANCE_RECEIPT = "receipt"
@@ -30,6 +32,23 @@ class ContentCategory(str, Enum):
     CODE_DEV = "dev"
     EPHEMERAL_JUNK = "junk"
     OTHER = "other"
+
+
+class ProductEntity(BaseModel):
+    name: str = Field(description="Product, clothes, or item name")
+    brand: Optional[str] = Field(default=None, description="Brand name if visible")
+    sku_or_article: Optional[str] = Field(default=None, description="SKU, barcode, or article number")
+    size_or_variant: Optional[str] = Field(default=None, description="Size or color variant")
+    search_url: Optional[str] = None
+    market_search_url: Optional[str] = None
+
+
+class TechEntity(BaseModel):
+    name: str = Field(description="Cloud server or technical configuration name")
+    specs: Optional[str] = Field(default=None, description="CPU/RAM/OS details")
+    location: Optional[str] = Field(default=None, description="Server location")
+    price: Optional[str] = Field(default=None, description="Price or billing rate")
+
 
 
 class MovieEntity(BaseModel):
@@ -102,6 +121,8 @@ class ExtractedEntities(BaseModel):
     movies: List[MovieEntity] = Field(default_factory=list)
     books: List[BookEntity] = Field(default_factory=list)
     apps: List[AppEntity] = Field(default_factory=list)
+    products: List[ProductEntity] = Field(default_factory=list)
+    tech: Optional[TechEntity] = None
     wifi: Optional[WifiEntity] = None
     tracking: List[TrackingEntity] = Field(default_factory=list)
     receipt: Optional[ReceiptEntity] = None

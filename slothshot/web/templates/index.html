@@ -103,6 +103,8 @@
       <button onclick="filterByTag('#movie')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🎬 #movie</button>
       <button onclick="filterByTag('#book')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">📚 #book</button>
       <button onclick="filterByTag('#app')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">📱 #app</button>
+      <button onclick="filterByTag('#product')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🛍️ #product</button>
+      <button onclick="filterByTag('#server')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🖥️ #server</button>
       <button onclick="filterByTag('#wifi')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">📶 #wifi</button>
       <button onclick="filterByTag('#receipt')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🧾 #receipt</button>
       <button onclick="filterByTag('#junk')" class="tag-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 transition">🗑️ #junk</button>
@@ -252,6 +254,43 @@
                   <i class="fa-brands fa-github"></i> GitHub
                 </a>
               </div>
+            </div>
+          `;
+        }
+
+        // Product / Shopping
+        if (item.entities.products && item.entities.products.length > 0) {
+          const p = item.entities.products[0];
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-pink-400 flex items-center justify-between">
+                <span><i class="fa-solid fa-bag-shopping"></i> Product: <strong>${p.name}</strong></span>
+                ${p.size_or_variant ? `<span class="text-slate-400 font-mono text-[11px]">${p.size_or_variant}</span>` : ''}
+              </div>
+              ${p.sku_or_article ? `<div class="text-[11px] text-slate-400 mt-1">Артикул / SKU: <span class="font-mono text-emerald-400">${p.sku_or_article}</span></div>` : ''}
+              <div class="flex items-center gap-2 mt-2">
+                <a href="${p.search_url}" target="_blank" class="px-2.5 py-1 rounded bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 text-xs font-medium border border-pink-500/30 flex items-center gap-1">
+                  <i class="fa-brands fa-google"></i> Search Item ↗
+                </a>
+                <a href="${p.market_search_url}" target="_blank" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium border border-amber-500/30 flex items-center gap-1">
+                  Market ↗
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Tech / Cloud Server
+        if (item.entities.tech) {
+          const s = item.entities.tech;
+          entitySection = `
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 my-2">
+              <div class="text-xs font-semibold text-cyan-400 flex items-center justify-between">
+                <span><i class="fa-solid fa-server"></i> Server: <strong>${s.name}</strong></span>
+                ${s.location ? `<span class="text-slate-400 font-mono text-[11px]">${s.location}</span>` : ''}
+              </div>
+              ${s.specs ? `<div class="text-[11px] text-slate-300 mt-1 font-mono"><i class="fa-solid fa-microchip text-slate-500"></i> ${s.specs}</div>` : ''}
+              ${s.price ? `<div class="text-[11px] text-emerald-400 mt-1 font-mono"><i class="fa-solid fa-tag text-emerald-600"></i> ${s.price}</div>` : ''}
             </div>
           `;
         }

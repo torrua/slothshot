@@ -51,6 +51,10 @@ def scan_command(path: Path) -> None:
             entities_summary.append(f"Book: {r.entities.books[0].title}")
         if r.entities.apps:
             entities_summary.append(f"App: {r.entities.apps[0].name}")
+        if r.entities.products:
+            entities_summary.append(f"Product: {r.entities.products[0].name}")
+        if r.entities.tech:
+            entities_summary.append(f"Tech: {r.entities.tech.name}")
         if r.entities.wifi:
             entities_summary.append(f"WiFi: {r.entities.wifi.ssid}")
         if r.entities.tracking:

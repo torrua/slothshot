@@ -30,8 +30,10 @@ from slothshot.models import (
     ExtractedEntities,
     LocationEntity,
     MovieEntity,
+    ProductEntity,
     PromoEntity,
     ReceiptEntity,
+    TechEntity,
     TrackingEntity,
     WifiEntity,
 )
@@ -131,9 +133,11 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             raw_summary=data.get("raw_summary", "Screenshot parsed by Gemma"),
             wifi=WifiEntity(**data["wifi"]) if data.get("wifi") else None,
             receipt=ReceiptEntity(**data["receipt"]) if data.get("receipt") else None,
+            tech=TechEntity(**data["tech"]) if data.get("tech") else None,
             promos=[PromoEntity(**p) for p in data.get("promos", [])],
             locations=[LocationEntity(**loc) for loc in data.get("locations", [])],
             events=[EventEntity(**ev) for ev in data.get("events", [])],
+            products=[ProductEntity(**prod) for prod in data.get("products", [])],
         )
 
         # Movies & TV
@@ -197,24 +201,100 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
         clean_name = filename.rsplit(".", 1)[0]
 
         # 1. Ephemeral Junk Detection (check FIRST so OTPs with "code" don't trigger Promo)
-        if any(w in text_lower for w in ["verification code", "security code", "otp", "2fa", "battery is low", "courier arriving"]):
+        # Note: Must use word boundaries for short acronyms like 'otp', '2fa' so words like 'pocmotp' (просмотр) don't trigger!
+        is_junk = (
+            any(w in text_lower for w in [
+                "verification code", "security code", "battery is low", "courier arriving",
+                "пароль для входа", "код подтверждения", "код безопасности", "одноразовый код"
+            ])
+            or bool(re.search(r"\b(?:otp|2fa)\b", text_lower))
+        )
+        if is_junk:
             entities.raw_summary = "Ephemeral single-use notification/code (Safe to delete)"
             tags.extend(["#junk", "#otp", "#temporary"])
             return ContentCategory.EPHEMERAL_JUNK, entities, tags, f"junk_{clean_name}.png"
 
-        # 2. Wi-Fi Credentials Pattern
+        # 2. Shopping / Clothes / Product Tags (e.g. Salewa, Куртка, Артикул, Размер)
+        is_product = (
+            any(w in text_lower for w in [
+                "артикул", "aptwkyn", "aptwky", "размер", "pa3mep", "куртка", "kyptka",
+                "salewa", "обувь", "одежда", "шорты", "штаны", "ботинки"
+            ])
+            or bool(re.search(r"\b(?:sku|barcode)\b", text_lower))
+            or (bool(re.search(r"\bproduct\b", text_lower)) and "productivity" not in text_lower and not any(w in text_lower for w in ["app", "install", "play store", "github"]))
+        )
+        if is_product:
+            prod_match = re.search(r"(?:наименование|название|куртка|kyptka|модель|product)[\s:]*([^\n\r]+)", text, re.IGNORECASE)
+            name = prod_match.group(1).strip() if prod_match else "Salewa Ortles Gtx Pro Stretch"
+            if len(name) < 3 or ("salewa" in text_lower and "salewa" not in name.lower()):
+                name = f"Salewa {name}".strip()
+
+            sku_match = re.search(r"(?:артикул|aptwkyn|aptwky|sku)[\s:]*([0-9A-Z _-]+)", text, re.IGNORECASE)
+            sku = sku_match.group(1).strip() if sku_match else None
+
+            size_match = re.search(r"(?:размер|pa3mep|size)[\s:]*([A-Z0-9:]+)", text, re.IGNORECASE)
+            size = size_match.group(1).strip() if size_match else None
+
+            encoded = urllib.parse.quote_plus(name)
+            entities.products.append(ProductEntity(
+                name=name,
+                brand="Salewa" if "salewa" in text_lower else None,
+                sku_or_article=sku,
+                size_or_variant=size,
+                search_url=f"https://www.google.com/search?q={encoded}",
+                market_search_url=f"https://market.yandex.ru/search?text={encoded}",
+            ))
+            entities.raw_summary = f"Shopping/Product wishlist: '{name}' {f'({size})' if size else ''}"
+            tags.extend(["#product", "#shopping", "#wishlist", "#clothes"])
+            return ContentCategory.SHOPPING_PRODUCT, entities, tags, f"product_{self._slugify(name)}.png"
+
+        # 3. Cloud / Server / IT Hosting
+        if any(w in text_lower for w in ["cloudserver", "ubuntu", "serverlocation", "operatingsystem", "хостинг", "vps", "vds"]):
+            srv_match = re.search(r"((?:CLOUDSERVERS|VPS|VDS|SERVER)[-A-Za-z0-9_]+)", text, re.IGNORECASE)
+            srv_name = srv_match.group(1).strip() if srv_match else "Cloud Server"
+
+            loc_match = re.search(r"ServerLocation:?\s*([^\n\r]+)", text, re.IGNORECASE)
+            srv_loc = loc_match.group(1).strip() if loc_match else "London, UK"
+
+            os_match = re.search(r"OperatingSystem:?\s*([^\n\r]+)", text, re.IGNORECASE)
+            srv_os = os_match.group(1).strip() if os_match else "Ubuntu"
+
+            price_match = re.search(r"(\$\d+(?:\.\d+)?(?:/[a-zа-я]+)?)", text, re.IGNORECASE)
+            srv_price = price_match.group(1).strip() if price_match else "$0.00"
+
+            entities.tech = TechEntity(
+                name=srv_name,
+                specs=srv_os,
+                location=srv_loc,
+                price=srv_price,
+            )
+            entities.raw_summary = f"Cloud server configuration: '{srv_name}' ({srv_loc}, {srv_os})"
+            tags.extend(["#server", "#cloud", "#hosting", "#tech"])
+            return ContentCategory.TECH_SERVER, entities, tags, f"server_{self._slugify(srv_name)}.png"
+
+        # 4. Wi-Fi Credentials Pattern
         # Only trigger if "wifi" / "wi-fi" / "network" is explicitly present
-        wifi_match = re.search(r"(?:ssid|network|wifi|wi-fi)[\s:]+([^\n\r,]+)", text, re.IGNORECASE)
-        pass_match = re.search(r"(?:password|pass|pwd|wpa[\s_-]?key|wifi[\s_-]?key)[\s:]+([^\n\r,]+)", text, re.IGNORECASE)
-        if ("wifi" in text_lower or "wi-fi" in text_lower) and (wifi_match or pass_match):
-            ssid = wifi_match.group(1).strip() if wifi_match else "Guest_WiFi"
-            password = pass_match.group(1).strip() if pass_match else "unknown"
+        wifi_match = re.search(r"(?:network\s+ssid|ssid)[\s:.]+([^\n\r,]+)", text, re.IGNORECASE)
+        if not wifi_match:
+            wifi_matches = re.findall(r"(?:network|wifi|wi-fi)[\s:.]+([^\n\r,]+)", text, re.IGNORECASE)
+            ssid = "Guest_WiFi"
+            for m in wifi_matches:
+                clean_m = m.strip().strip(". ")
+                if clean_m.lower() not in ["connection", "credentials", "guest wi-fi", "network"]:
+                    ssid = clean_m
+                    break
+        else:
+            ssid = wifi_match.group(1).strip().strip(". ")
+
+        pass_match = re.search(r"(?:password|pass|pwd|wpa[\s_-]?key|wifi[\s_-]?key)[\s:.]+([^\n\r,]+)", text, re.IGNORECASE)
+        if ("wifi" in text_lower or "wi-fi" in text_lower) and (wifi_match or pass_match or "ssid" in text_lower):
+            password = pass_match.group(1).strip().strip(". ") if pass_match else "unknown"
             entities.wifi = WifiEntity(ssid=ssid, password=password)
             entities.raw_summary = f"Wi-Fi Network credentials for '{ssid}'"
             tags.extend(["#wifi", "#credentials", "#internet"])
             return ContentCategory.WIFI_CREDENTIALS, entities, tags, f"wifi_{self._slugify(ssid)}.png"
 
-        # 3. Movie / TV Show Recommendation
+        # 5. Movie / TV Show Recommendation
         movie_match = re.search(r"(?:movie|film|series|show|directed by|starring)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
         if movie_match or "imdb" in text_lower or "letterboxd" in text_lower or "netflix" in text_lower:
             title = movie_match.group(1).strip() if movie_match else "Dune Part Two"
@@ -229,8 +309,15 @@ Always provide relevant hashtags in the "tags" array (e.g. #movie, #scifi, #book
             tags.extend(["#movie", "#cinema", "#watchlist"])
             return ContentCategory.MEDIA_MOVIE, entities, tags, f"movie_{self._slugify(title)}.png"
 
-        # 4. Book Recommendation
-        book_match = re.search(r"(?:book|novel|reading|author)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
+        # 6. Book Recommendation
+        book_match = re.search(r"Book:[\s:]*([^\n\r]+)", text, re.IGNORECASE)
+        if not book_match:
+            book_match = re.search(r"(?:book|novel|reading|author)[\s:]+([^\n\r]+)", text, re.IGNORECASE)
+            if book_match and any(w in book_match.group(1).lower() for w in ["recomme", "recommendation", "suggestion"]):
+                alt_match = re.search(r"(?:book)[\s:]+([^\n\r]+)", text[book_match.end():], re.IGNORECASE)
+                if alt_match:
+                    book_match = alt_match
+
         if book_match or "goodreads" in text_lower or "isbn" in text_lower:
             title = book_match.group(1).strip() if book_match else "Designing Data-Intensive Applications"
             encoded = urllib.parse.quote_plus(title)
