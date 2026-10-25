@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">SlothShot</string>
+    <string name="channel_name">SlothShot Screenshot Triage</string>
+    <string name="channel_description">Notifies with smart takeaways and actions when a screenshot is captured</string>
+    <string name="service_running">SlothShot is quietly triaging screenshots in the background 🦥</string>
+</resources>

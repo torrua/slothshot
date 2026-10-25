@@ -260,6 +260,21 @@ slothshot serve --port 8000
 slothshot sync
 ```
 
+### Option D: Native Android App (Kotlin + Jetpack Compose)
+Prefer a native Android app running directly in your pocket? SlothShot includes a standalone native Android client in `android/`:
+- **100% On-Device OCR** via **Google ML Kit Text Recognition** (extracts text in ~30ms without an internet connection).
+- **Background MediaStore Observer**: Automatically catches new screenshots the moment you press Volume Down + Power.
+- **Smart Notification Actions**: `[Copy Code]` for 2FA/OTPs and Wi-Fi passwords, and `[Purge]` directly from your notification drawer.
+- **1-Click MediaStore Deletion**: Safely cleans ephemeral screenshot piles via Android 11+ `MediaStore.createDeleteRequest()`.
+- **Optional Gemini 2.5 Flash Cloud Mode**: Deep visual and structured extraction whenever an API key is provided in Settings.
+
+```bash
+cd android
+./gradlew assembleDebug
+```
+Install the resulting `app-debug.apk` directly on your Android phone!
+
+
 ---
 
 ## 🏆 Partner Categories Checklist

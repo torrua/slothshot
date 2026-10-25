@@ -115,6 +115,28 @@ Open **http://localhost:8000** on your browser or smartphone.
 
 ---
 
+## 📱 Native Android App (Kotlin & Jetpack Compose)
+
+In addition to the Python backend & Web Dashboard, SlothShot includes an **autonomous native Android app** located in [`android/`](android/):
+
+- ⚡ **100% On-Device OCR**: Uses **Google ML Kit Text Recognition** for instant (~30-50ms) text extraction directly on your phone with zero internet required.
+- 🦥 **Background Screenshot Monitor**: A background `ContentObserver` watches `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` in real-time.
+- 🔔 **Instant Action Notifications**:
+  - `[📋 Copy Code / Password]`: Extracts 2FA/OTP codes and Wi-Fi credentials with 1-tap clipboard copy.
+  - `[🗑️ Purge]`: Delete ephemeral screenshots straight from the notification banner.
+- 🧹 **1-Click MediaStore Storage Reclaim**: Uses Android 11+ `MediaStore.createDeleteRequest()` to safely trash accumulated temporary screenshots in batch.
+- ✨ **Optional Gemini 2.5 Flash Cloud Enrichment**: Enter your Gemini API key in Settings to supercharge extraction for complex receipts and tables.
+
+### Building the Android APK:
+```bash
+cd android
+./gradlew assembleDebug
+```
+The installable APK will be at `android/app/build/outputs/apk/debug/app-debug.apk` (or install pre-built `SlothShot-debug.apk`).
+
+
+---
+
 ## 🏆 Hacktoberfest 2026 Partner Tracks
 
 | Category | Partner | How SlothShot Uses It |

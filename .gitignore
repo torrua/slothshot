@@ -15,3 +15,13 @@ data/archive/
 data/screenshots/*
 !data/screenshots/Screenshot_20261025_*.png
 !data/screenshots/.gitkeep
+
+# Android build outputs & local config
+*.apk
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.kotlin/
+android/.idea/
+
