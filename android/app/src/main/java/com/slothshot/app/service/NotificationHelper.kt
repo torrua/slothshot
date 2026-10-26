@@ -44,8 +44,8 @@ object NotificationHelper {
 
     fun buildForegroundNotification(context: Context) =
         NotificationCompat.Builder(context, CHANNEL_MONITOR)
-            .setContentTitle("SlothShot Active")
-            .setContentText("Quietly monitoring screenshots to extract takeaways")
+            .setContentTitle("SlothShot")
+            .setContentText("Авто-разбор новых скриншотов")
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .build()
@@ -68,9 +68,9 @@ object NotificationHelper {
 
         val builder = NotificationCompat.Builder(context, CHANNEL_TRIAGE)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("[${item.category.displayName}] ${item.title}")
+            .setContentTitle("${item.category.displayName}: ${item.title}")
             .setContentText(item.summary)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("${item.summary}\n\nTakeaway: ${item.primaryActionPayload}"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(if (item.primaryActionPayload.isNotBlank()) "${item.summary}\n\n${item.primaryActionPayload}" else item.summary))
             .setContentIntent(pendingContentIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -95,10 +95,10 @@ object NotificationHelper {
             )
         }
 
-        // Add Open App / Purge action
+        // Add Open App action
         builder.addAction(
             R.drawable.ic_notification,
-            "View / Purge",
+            "Открыть",
             pendingContentIntent
         )
 

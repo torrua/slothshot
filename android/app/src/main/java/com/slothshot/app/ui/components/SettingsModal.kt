@@ -66,19 +66,12 @@ fun SettingsModal(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "Настройки",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
-                    letterSpacing = (-0.3).sp
-                )
-                Text(
-                    text = "Интеллект и параметры фонового мониторинга",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = "Настройки",
+                fontWeight = FontWeight.Bold,
+                fontSize = 19.sp,
+                letterSpacing = (-0.3).sp
+            )
         },
         text = {
             Column(
@@ -89,7 +82,7 @@ fun SettingsModal(
             ) {
                 // Section: Gemini AI
                 Text(
-                    text = "Мультимодальный Gemini AI",
+                    text = "Gemini AI",
                     style = MaterialTheme.typography.titleSmall,
                     color = SlothPrimary,
                     fontWeight = FontWeight.SemiBold,
@@ -202,7 +195,7 @@ fun SettingsModal(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Бесплатный ключ Gemini от Google AI Studio (15 запр/мин) обеспечивает визуальный перевод и OCR кириллицы со 100% точностью.",
+                            text = "Gemini анализирует смысл скриншота, переводит текст и извлекает ключевые данные.",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 15.sp
@@ -212,9 +205,9 @@ fun SettingsModal(
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
 
-                // Section: On-Device Engine (Option B)
+                // Section: On-Device Engine
                 Text(
-                    text = "Офлайн-движок (Вариант Б)",
+                    text = "Офлайн-распознавание",
                     style = MaterialTheme.typography.titleSmall,
                     color = SlothSecondary,
                     fontWeight = FontWeight.SemiBold,
@@ -255,7 +248,7 @@ fun SettingsModal(
                                 color = Color(0xFF10B981)
                             )
                             Text(
-                                text = "Tesseract 5.5 Cyrillic с авто-инверсией тёмных тем и переводом на русский. Работает автономно без интернета (0 МБ расхода).",
+                                text = "Tesseract OCR работает локально без интернета.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 15.sp
@@ -266,16 +259,16 @@ fun SettingsModal(
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
 
-                // Switches with refined thumb and track colors
+                // Switches
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Автокопирование кодов", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        Text("Копировать коды сразу", fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         Text(
-                            "Копировать OTP/2FA сразу в буфер при скриншоте",
+                            "Помещать OTP и 2FA в буфер обмена",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp
@@ -294,9 +287,9 @@ fun SettingsModal(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Фоновый мониторинг", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        Text("Авто-разбор новых скриншотов", fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         Text(
-                            "Слушать появление новых скриншотов в MediaStore",
+                            "Обрабатывать скриншоты сразу после создания",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp
@@ -325,7 +318,7 @@ fun SettingsModal(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Сбросить кэш и пересканировать", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text("Пересканировать галерею", fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
         },
@@ -347,7 +340,7 @@ fun SettingsModal(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                Text("Закрыть", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,

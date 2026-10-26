@@ -57,7 +57,7 @@ fun RawContentBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "Распознанный текст OCR",
+                        text = "Текст со скриншота",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -83,7 +83,7 @@ fun RawContentBottomSheet(
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("SlothShot OCR", item.rawContent)
                     clipboard.setPrimaryClip(clip)
-                    Toast.makeText(context, "Текст скопирован в буфер!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -96,7 +96,7 @@ fun RawContentBottomSheet(
             ) {
                 Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Скопировать весь текст", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Скопировать текст", fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
 
             // OCR Text container

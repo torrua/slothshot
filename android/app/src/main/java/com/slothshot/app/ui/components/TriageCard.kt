@@ -392,14 +392,14 @@ private fun handleAction(context: Context, type: ActionType, payload: String) {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("SlothShot", payload)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(context, "Copied: $payload", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
         }
         ActionType.OPEN_URL -> {
             runCatching {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(payload))
                 context.startActivity(intent)
             }.onFailure {
-                Toast.makeText(context, "Cannot open URL", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show()
             }
         }
         ActionType.SEARCH_WEB -> {
@@ -408,14 +408,14 @@ private fun handleAction(context: Context, type: ActionType, payload: String) {
                 val intent = Intent(Intent.ACTION_VIEW, searchUri)
                 context.startActivity(intent)
             }.onFailure {
-                Toast.makeText(context, "Cannot open web search", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Не удалось открыть поиск", Toast.LENGTH_SHORT).show()
             }
         }
         else -> {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("SlothShot", payload)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(context, "Copied: $payload", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
         }
     }
 }

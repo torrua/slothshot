@@ -1,18 +1,18 @@
 package com.slothshot.app.model
 
 enum class ContentCategory(val displayName: String, val emoji: String) {
-    TEMPORARY_UTILITY("Temporary Utility", "⚡"),
-    ENTERTAINMENT_MEDIA("Movies & Books", "🎬"),
-    TRANSACTIONAL_RECEIPT("Receipts & Orders", "🧾"),
-    KNOWLEDGE_REFERENCE("Knowledge & Notes", "📚"),
-    PERSONAL_CHAT("Chats & Social", "💬"),
-    UNKNOWN("Other", "📁")
+    TEMPORARY_UTILITY("Мусор / 2FA", "⚡"),
+    ENTERTAINMENT_MEDIA("Кино и книги", "🎬"),
+    TRANSACTIONAL_RECEIPT("Чеки и заказы", "🧾"),
+    KNOWLEDGE_REFERENCE("Заметки", "📚"),
+    PERSONAL_CHAT("Чаты", "💬"),
+    UNKNOWN("Прочее", "📁")
 }
 
 enum class RetentionClass(val label: String, val badgeColorHex: String) {
-    EPHEMERAL_PURGE("Purge in 24h", "#EF4444"),
-    ACTION_REQUIRED("Action Pending", "#F59E0B"),
-    KEEP_ARCHIVE("Keep Archive", "#10B981")
+    EPHEMERAL_PURGE("Мусор", "#EF4444"),
+    ACTION_REQUIRED("Нужно действие", "#F59E0B"),
+    KEEP_ARCHIVE("Сохранить", "#10B981")
 }
 
 enum class ActionType {

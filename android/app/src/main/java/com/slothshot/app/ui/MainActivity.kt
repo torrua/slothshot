@@ -431,7 +431,7 @@ private fun SlothTopAppBar(
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = "Настройки",
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 )
@@ -483,17 +483,17 @@ private fun EmptyState(
                 )
             }
             Text(
-                text = if (isScanning) "Ленивец анализирует скриншоты..."
+                text = if (isScanning) "Анализ скриншотов..."
                        else if (isArchive) "В архиве пусто"
-                       else "Лента скриншотов пуста",
+                       else "Скриншотов нет",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = if (isScanning) "Работает распознавание текста и анализ смысла..."
-                       else if (isArchive) "Здесь сохраняются удаленные скриншоты с извлеченной полезной информацией."
-                       else "Сделайте новый скриншот или нажмите «Сканировать» для быстрого разбора галереи.",
+                text = if (isScanning) "Извлекаем данные и категории..."
+                       else if (isArchive) "Удаленные скриншоты хранятся здесь"
+                       else "Сделайте скриншот или нажмите «Сканировать»",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -510,7 +510,7 @@ private fun EmptyState(
                 ) {
                     Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Сканировать галерею", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("Сканировать", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

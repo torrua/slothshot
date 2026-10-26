@@ -92,10 +92,10 @@ fun DashboardMetricsCard(
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "${metrics.totalScanned} в базе",
+                                    text = "${metrics.totalScanned} скриншотов",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.5.sp,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -106,14 +106,14 @@ fun DashboardMetricsCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 )
                                 Text(
-                                    text = "${formatBytes(metrics.reclaimedBytes)} очищено",
+                                    text = "${metrics.purgedCount} в архиве",
                                     fontSize = 11.5.sp,
                                     color = SlothPrimary,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
                             Text(
-                                text = "${metrics.timeSavedMinutes}м времени сэкономлено",
+                                text = "Освобождено: ${formatBytes(metrics.reclaimedBytes)}",
                                 fontSize = 10.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -173,20 +173,13 @@ fun DashboardMetricsCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Сводка памяти",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            letterSpacing = (-0.3).sp
-                        )
-                        Text(
-                            text = "Zero-effort авто-сортировка",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Статистика",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        letterSpacing = (-0.3).sp
+                    )
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -269,7 +262,7 @@ fun DashboardMetricsCard(
                                     color = Color(0xFFFBBF24)
                                 )
                                 Text(
-                                    text = "Бесплатный ключ даёт визуальный перевод и OCR",
+                                    text = "Анализ смысла и извлечение данных",
                                     fontSize = 10.5.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -333,8 +326,8 @@ fun DashboardMetricsCard(
                                 .background(Color.White.copy(alpha = 0.08f))
                         )
                         StatItem(
-                            label = "Сэкономлено",
-                            value = "${metrics.timeSavedMinutes}м",
+                            label = "В архиве",
+                            value = "${metrics.purgedCount}",
                             accentColor = SlothSecondary,
                             modifier = Modifier.weight(1f)
                         )

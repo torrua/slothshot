@@ -36,11 +36,7 @@ class GeminiTriageEngine(
     ): ParsedTakeaway = withContext(Dispatchers.IO) {
         val apiKey = apiKeyProvider().trim()
         if (apiKey.isEmpty()) {
-            // No API key configured: fallback to heuristic without generating fake Latin gibberish
-            val heuristicResult = heuristicFallback.triage(ocrText, fileName)
-            return@withContext heuristicResult.copy(
-                summary = "${heuristicResult.summary}\n(Для 100% распознавания кириллицы и перевода на русский укажите ключ Gemini в Настройках)"
-            )
+            return@withContext heuristicFallback.triage(ocrText, fileName)
         }
 
         try {

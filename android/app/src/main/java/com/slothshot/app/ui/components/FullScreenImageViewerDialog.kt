@@ -8,8 +8,8 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,8 +128,8 @@ fun FullScreenImageViewerDialog(
                         modifier = Modifier.background(Color.White.copy(alpha = 0.2f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.OpenInNew,
-                            contentDescription = "Open in Gallery",
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = "Открыть в галерее",
                             tint = Color.White
                         )
                     }
@@ -141,7 +141,7 @@ fun FullScreenImageViewerDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = "Закрыть",
                             tint = Color.White
                         )
                     }
@@ -160,7 +160,7 @@ fun FullScreenImageViewerDialog(
                         .padding(bottom = 32.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.7f))
                 ) {
-                    Text("Reset Zoom (x${String.format("%.1f", scale)})", color = Color.White)
+                    Text("Сбросить масштаб", color = Color.White)
                 }
             }
         }
