@@ -6,19 +6,24 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +44,7 @@ import com.slothshot.app.ui.theme.SlothError
 import com.slothshot.app.ui.theme.SlothPrimary
 import com.slothshot.app.ui.theme.SlothSurfaceVariant
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TriageCard(
     item: TriageItem,
@@ -49,9 +55,12 @@ fun TriageCard(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    var isExpanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -106,7 +115,7 @@ fun TriageCard(
                 }
             }
 
-            // Middle: Image thumbnail + Title & Summary
+            // Middle: Image thumbnail + Title & Summary (tap text to toggle expansion)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -129,9 +138,15 @@ fun TriageCard(
                     )
                 }
 
-                // Title & Summary
+                // Title & Summary (tap to expand/collapse full description)
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            isExpanded = !isExpanded
+                        },
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
@@ -139,38 +154,112 @@ fun TriageCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = item.summary,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 18.sp
                     )
+
+                    // Expand/collapse indicator button
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(
+                            text = if (isExpanded) "Свернуть" else "Подробнее",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SlothPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp
+                        )
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isExpanded) "Свернуть" else "Развернуть",
+                            modifier = Modifier.size(14.dp),
+                            tint = SlothPrimary
+                        )
+                    }
                 }
             }
 
-            // Key-Values chips
-            if (item.keyValues.isNotEmpty()) {
-                Row(
+            // Key-Values & Tags chips with wrapping FlowRow (never truncated with ugly ellipses!)
+            val hasContent = item.keyValues.isNotEmpty() || item.tags.isNotEmpty()
+            if (hasContent) {
+                val displayedKeyValues = if (isExpanded) item.keyValues.entries.toList() else item.keyValues.entries.take(3).toList()
+                val displayedTags = if (isExpanded) item.tags else emptyList()
+
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    item.keyValues.entries.take(3).forEach { (k, v) ->
+                    displayedKeyValues.forEach { (k, v) ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = Color.White.copy(alpha = 0.04f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                            modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isExpanded = !isExpanded
+                            }
                         ) {
                             Text(
                                 text = "$k: $v",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = SlothPrimary,
-                                maxLines = 1,
+                                maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    displayedTags.forEach { tag ->
+                        val formattedTag = if (tag.startsWith("#")) tag else "#$tag"
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = SlothPrimary.copy(alpha = 0.08f),
+                            border = BorderStroke(1.dp, SlothPrimary.copy(alpha = 0.22f)),
+                            modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isExpanded = !isExpanded
+                            }
+                        ) {
+                            Text(
+                                text = formattedTag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SlothPrimary,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    if (!isExpanded && (item.keyValues.size > 3 || item.tags.isNotEmpty())) {
+                        val hiddenCount = (item.keyValues.size - 3).coerceAtLeast(0) + item.tags.size
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.03f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
+                            modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isExpanded = true
+                            }
+                        ) {
+                            Text(
+                                text = "+$hiddenCount ещё",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
