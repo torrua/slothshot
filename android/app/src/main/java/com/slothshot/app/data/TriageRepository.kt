@@ -188,6 +188,15 @@ class TriageRepository private constructor(context: Context) {
         persistItems(updated)
     }
 
+    fun restoreItem(id: String) {
+        val current = _itemsFlow.value
+        val updated = current.map {
+            if (it.id == id) it.copy(isPurged = false) else it
+        }
+        _itemsFlow.value = updated
+        persistItems(updated)
+    }
+
     fun markAllEphemeralAsPurged(ids: Set<String>) {
         val current = _itemsFlow.value
         val updated = current.map {

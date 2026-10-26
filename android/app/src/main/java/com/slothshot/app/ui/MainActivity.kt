@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.FolderDelete
@@ -65,9 +66,10 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            val count = pendingDeleteIds.size
             viewModel.markEphemeralPurged(pendingDeleteIds)
             pendingDeleteIds.clear()
-            Toast.makeText(this, "Screenshots purged successfully!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Отправлено в архив ($count)", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -195,6 +197,7 @@ class MainActivity : ComponentActivity() {
                             item(key = "empty_state") {
                                 EmptyState(
                                     isScanning = isScanning,
+                                    isArchive = filter is FilterType.PurgedOnly,
                                     onScanClicked = { viewModel.scanGallery() },
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -208,7 +211,11 @@ class MainActivity : ComponentActivity() {
                                         item = item,
                                         onPurgeClicked = { requestPurge(listOf(it)) },
                                         onViewRawContent = { viewModel.rawContentItem.value = it },
-                                        onImageClicked = { viewModel.fullScreenImageItem.value = it }
+                                        onImageClicked = { viewModel.fullScreenImageItem.value = it },
+                                        onRestoreClicked = {
+                                            viewModel.restoreItem(it.id)
+                                            Toast.makeText(this@MainActivity, "Восстановлено из архива", Toast.LENGTH_SHORT).show()
+                                        }
                                     )
                                 }
                             }
@@ -300,7 +307,7 @@ class MainActivity : ComponentActivity() {
             viewModel.markItemPurged(item.id)
         }
         pendingDeleteIds.clear()
-        Toast.makeText(this, "Purged ${itemsToPurge.size} items", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Отправлено в архив (${itemsToPurge.size})", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -449,6 +456,7 @@ private fun SlothTopAppBar(
 @Composable
 private fun EmptyState(
     isScanning: Boolean,
+    isArchive: Boolean = false,
     onScanClicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -467,24 +475,37 @@ private fun EmptyState(
                     .background(SlothPrimary.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_sloth_logo),
-                    contentDescription = "Sloth Logo",
-                    modifier = Modifier.size(42.dp)
-                )
+                if (isArchive) {
+                    Icon(
+                        imageVector = Icons.Default.Archive,
+                        contentDescription = "Архив",
+                        tint = SlothPrimary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_sloth_logo),
+                        contentDescription = "Sloth Logo",
+                        modifier = Modifier.size(42.dp)
+                    )
+                }
             }
             Text(
-                text = if (isScanning) "Ленивец анализирует скриншоты..." else "Лента скриншотов пуста",
+                text = if (isScanning) "Ленивец анализирует скриншоты..."
+                       else if (isArchive) "В архиве пусто"
+                       else "Лента скриншотов пуста",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = if (isScanning) "Работает локальное распознавание текста (Google ML Kit)..." else "Сделайте новый скриншот или нажмите «Сканировать» для быстрого разбора галереи.",
+                text = if (isScanning) "Работает распознавание текста и анализ смысла..."
+                       else if (isArchive) "Здесь сохраняются удаленные скриншоты с извлеченной полезной информацией."
+                       else "Сделайте новый скриншот или нажмите «Сканировать» для быстрого разбора галереи.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!isScanning) {
+            if (!isScanning && !isArchive) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Button(
                     onClick = onScanClicked,

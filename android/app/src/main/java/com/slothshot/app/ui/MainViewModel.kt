@@ -35,7 +35,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val filteredItems: StateFlow<List<TriageItem>> = combine(items, filter) { list, f ->
         when (f) {
-            is FilterType.All -> list
+            is FilterType.All -> list.filter { !it.isPurged }
             is FilterType.EphemeralOnly -> list.filter { it.retention == RetentionClass.EPHEMERAL_PURGE && !it.isPurged }
             is FilterType.ByCategory -> list.filter { it.category == f.category && !it.isPurged }
             is FilterType.PurgedOnly -> list.filter { it.isPurged }
@@ -63,6 +63,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun markItemPurged(id: String) {
         repository.markItemAsPurged(id)
+    }
+
+    fun restoreItem(id: String) {
+        repository.restoreItem(id)
     }
 
     fun markEphemeralPurged(ids: Set<String>) {

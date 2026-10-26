@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,6 +54,7 @@ fun TriageCard(
     onPurgeClicked: (TriageItem) -> Unit,
     onViewRawContent: (TriageItem) -> Unit,
     onImageClicked: (TriageItem) -> Unit,
+    onRestoreClicked: ((TriageItem) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -122,7 +125,7 @@ fun TriageCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val badgeIcon = if (item.isPurged) Icons.Default.DeleteOutline else item.retention.icon
+                        val badgeIcon = if (item.isPurged) Icons.Default.Archive else item.retention.icon
                         Icon(
                             imageVector = badgeIcon,
                             contentDescription = null,
@@ -130,7 +133,7 @@ fun TriageCard(
                             tint = if (item.isPurged) Color.Gray else retentionColor
                         )
                         Text(
-                            text = if (item.isPurged) "ОЧИЩЕНО" else item.retention.label,
+                            text = if (item.isPurged) "В АРХИВЕ" else item.retention.label,
                             color = if (item.isPurged) Color.Gray else retentionColor,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
@@ -344,8 +347,25 @@ fun TriageCard(
                     )
                 }
 
-                // Purge Button (WCAG 44-48dp touch target with haptic feedback)
-                if (!item.isPurged) {
+                // Purge / Restore Button (WCAG 44-48dp touch target with haptic feedback)
+                if (item.isPurged) {
+                    if (onRestoreClicked != null) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onRestoreClicked(item)
+                            },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Restore,
+                                contentDescription = "Восстановить из архива",
+                                modifier = Modifier.size(20.dp),
+                                tint = SlothPrimary
+                            )
+                        }
+                    }
+                } else {
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -355,7 +375,7 @@ fun TriageCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Удалить скриншот",
+                            contentDescription = "Удалить скриншот в архив",
                             modifier = Modifier.size(20.dp),
                             tint = SlothError
                         )

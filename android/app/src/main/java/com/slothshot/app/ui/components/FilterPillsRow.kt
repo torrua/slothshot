@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Movie
@@ -77,8 +78,8 @@ fun FilterPillsRow(
         SleekChip(
             selected = selectedFilter is FilterType.PurgedOnly,
             onClick = { onFilterSelected(FilterType.PurgedOnly) },
-            label = "Очищенные",
-            icon = Icons.Default.DeleteOutline
+            label = "Архив",
+            icon = Icons.Default.Archive
         )
     }
 }
