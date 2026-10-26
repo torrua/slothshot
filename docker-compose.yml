@@ -9,7 +9,7 @@ services:
       - ENVIRONMENT=production
       - SENTRY_DSN=${SENTRY_DSN:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMMA_MODEL_NAME=${GEMMA_MODEL_NAME:-gemini-2.5-flash}
+      - GEMMA_MODEL_NAME=${GEMMA_MODEL_NAME:-gemini-3.5-flash-lite}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
       - TABPFN_TOKEN=${TABPFN_TOKEN:-}
     restart: unless-stopped

@@ -217,7 +217,7 @@ async def get_audio_briefing():
 
 class GeminiKeyRequest(BaseModel):
     api_key: str
-    model_name: Optional[str] = "gemini-2.5-flash"
+    model_name: Optional[str] = "gemini-3.5-flash-lite"
 
 
 @app.get("/api/settings")
@@ -251,7 +251,7 @@ async def update_gemini_key(req: GeminiKeyRequest):
     try:
         from google import genai
         test_client = genai.Client(api_key=key)
-        model = req.model_name or settings.gemma_model_name or "gemini-2.5-flash"
+        model = req.model_name or settings.gemma_model_name or "gemini-3.5-flash-lite"
         test_res = test_client.models.generate_content(
             model=model,
             contents="Say 'OK' in one word.",

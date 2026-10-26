@@ -100,78 +100,94 @@ class GeminiTriageEngine(
                 })
             }
 
-            val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey")
-                .post(requestBodyJson.toString().toRequestBody("application/json".toMediaType()))
-                .build()
+            // Support candidate models with automatic fallback: optimal Flash-Lite first (fastest, lowest token usage), then standard Flash
+            val candidateModels = listOf("gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash")
+            var lastErrorCode: String? = null
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val fallback = heuristicFallback.triage(ocrText, fileName)
-                    return@withContext fallback.copy(
-                        summary = "${fallback.summary}\n(Ошибка вызова Gemini: HTTP ${response.code})"
-                    )
-                }
+            for (model in candidateModels) {
+                try {
+                    val request = Request.Builder()
+                        .url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey")
+                        .post(requestBodyJson.toString().toRequestBody("application/json".toMediaType()))
+                        .build()
 
-                val respStr = response.body?.string().orEmpty()
-                val jsonResp = JSONObject(respStr)
-                val candidates = jsonResp.optJSONArray("candidates")
-                if (candidates == null || candidates.length() == 0) {
-                    return@withContext heuristicFallback.triage(ocrText, fileName)
-                }
+                    val response = client.newCall(request).execute()
+                    response.use { resp ->
+                        if (!resp.isSuccessful) {
+                            lastErrorCode = "HTTP ${resp.code}"
+                            return@use
+                        }
 
-                val textContent = candidates.getJSONObject(0)
-                    .getJSONObject("content")
-                    .getJSONArray("parts")
-                    .getJSONObject(0)
-                    .getString("text")
+                        val respStr = resp.body?.string().orEmpty()
+                        val jsonResp = JSONObject(respStr)
+                        val candidates = jsonResp.optJSONArray("candidates")
+                        if (candidates == null || candidates.length() == 0) {
+                            lastErrorCode = "Пустой ответ модели"
+                            return@use
+                        }
 
-                val cleanJson = textContent.trim()
-                    .removePrefix("```json")
-                    .removePrefix("```")
-                    .removeSuffix("```")
-                    .trim()
+                        val textContent = candidates.getJSONObject(0)
+                            .getJSONObject("content")
+                            .getJSONArray("parts")
+                            .getJSONObject(0)
+                            .getString("text")
 
-                val parsed = JSONObject(cleanJson)
+                        val cleanJson = textContent.trim()
+                            .removePrefix("```json")
+                            .removePrefix("```")
+                            .removeSuffix("```")
+                            .trim()
 
-                val catStr = parsed.optString("category", "KNOWLEDGE_REFERENCE")
-                val category = runCatching { ContentCategory.valueOf(catStr) }.getOrDefault(ContentCategory.KNOWLEDGE_REFERENCE)
+                        val parsed = JSONObject(cleanJson)
 
-                val retStr = parsed.optString("retention", "KEEP_ARCHIVE")
-                val retention = runCatching { RetentionClass.valueOf(retStr) }.getOrDefault(RetentionClass.KEEP_ARCHIVE)
+                        val catStr = parsed.optString("category", "KNOWLEDGE_REFERENCE")
+                        val category = runCatching { ContentCategory.valueOf(catStr) }.getOrDefault(ContentCategory.KNOWLEDGE_REFERENCE)
 
-                val actStr = parsed.optString("action_type", "COPY")
-                val actionType = runCatching { ActionType.valueOf(actStr) }.getOrDefault(ActionType.COPY)
+                        val retStr = parsed.optString("retention", "KEEP_ARCHIVE")
+                        val retention = runCatching { RetentionClass.valueOf(retStr) }.getOrDefault(RetentionClass.KEEP_ARCHIVE)
 
-                val kvObj = parsed.optJSONObject("key_values")
-                val kvMap = mutableMapOf<String, String>()
-                kvObj?.keys()?.forEach { k ->
-                    kvMap[k] = kvObj.optString(k)
-                }
+                        val actStr = parsed.optString("action_type", "COPY")
+                        val actionType = runCatching { ActionType.valueOf(actStr) }.getOrDefault(ActionType.COPY)
 
-                val tagsArr = parsed.optJSONArray("tags")
-                val tagsList = mutableListOf<String>()
-                if (tagsArr != null) {
-                    for (i in 0 until tagsArr.length()) {
-                        tagsList.add(tagsArr.getString(i))
+                        val kvObj = parsed.optJSONObject("key_values")
+                        val kvMap = mutableMapOf<String, String>()
+                        kvObj?.keys()?.forEach { k ->
+                            kvMap[k] = kvObj.optString(k)
+                        }
+
+                        val tagsArr = parsed.optJSONArray("tags")
+                        val tagsList = mutableListOf<String>()
+                        if (tagsArr != null) {
+                            for (i in 0 until tagsArr.length()) {
+                                tagsList.add(tagsArr.getString(i))
+                            }
+                        }
+
+                        val rawContentResult = parsed.optString("raw_content", "").ifBlank { ocrText }
+
+                        return@withContext ParsedTakeaway(
+                            category = category,
+                            retention = retention,
+                            title = parsed.optString("title", "Скриншот"),
+                            summary = parsed.optString("summary", "Разобранный скриншот"),
+                            keyValues = kvMap,
+                            tags = tagsList,
+                            actionType = actionType,
+                            actionLabel = parsed.optString("action_label", "Скопировать"),
+                            actionPayload = parsed.optString("action_payload", rawContentResult),
+                            fullRawContent = rawContentResult
+                        )
                     }
+                } catch (e: Exception) {
+                    lastErrorCode = e.localizedMessage ?: e.message
                 }
-
-                val rawContentResult = parsed.optString("raw_content", "").ifBlank { ocrText }
-
-                ParsedTakeaway(
-                    category = category,
-                    retention = retention,
-                    title = parsed.optString("title", "Скриншот"),
-                    summary = parsed.optString("summary", "Разобранный скриншот"),
-                    keyValues = kvMap,
-                    tags = tagsList,
-                    actionType = actionType,
-                    actionLabel = parsed.optString("action_label", "Скопировать"),
-                    actionPayload = parsed.optString("action_payload", rawContentResult),
-                    fullRawContent = rawContentResult
-                )
             }
+
+            // All models in fallback chain failed
+            val fallback = heuristicFallback.triage(ocrText, fileName)
+            return@withContext fallback.copy(
+                summary = "${fallback.summary}\n(Ошибка вызова Gemini: ${lastErrorCode ?: "неизвестно"})"
+            )
         } catch (e: Exception) {
             val fallback = heuristicFallback.triage(ocrText, fileName)
             fallback.copy(

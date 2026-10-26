@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # Gemma / Google AI configuration
     gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY", None)
-    gemma_model_name: str = os.getenv("GEMMA_MODEL_NAME", "gemini-2.5-flash")  # gemini-2.5-flash or gemma-2-9b-it
+    gemma_model_name: str = os.getenv("GEMMA_MODEL_NAME", "gemini-3.5-flash-lite")  # gemini-3.5-flash-lite (optimal), gemini-3.5-flash, or gemini-3.8-flash
 
     # Sentry Configuration (Agent Tracing)
     sentry_dsn: Optional[str] = os.getenv("SENTRY_DSN", None)
