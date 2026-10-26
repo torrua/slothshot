@@ -326,23 +326,13 @@ private fun SlothTopAppBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.ic_sloth_logo),
+                    contentDescription = "SlothShot Logo",
                     modifier = Modifier
                         .size(34.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF059669), Color(0xFF10B981))
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_sloth_logo),
-                        contentDescription = "SlothShot Logo",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                )
                 Text(
                     text = "SlothShot",
                     fontWeight = FontWeight.Bold,
@@ -468,27 +458,29 @@ private fun EmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(SlothPrimary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isArchive) {
+            if (isArchive) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(SlothPrimary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         imageVector = Icons.Default.Archive,
                         contentDescription = "Архив",
                         tint = SlothPrimary,
                         modifier = Modifier.size(32.dp)
                     )
-                } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_sloth_logo),
-                        contentDescription = "Sloth Logo",
-                        modifier = Modifier.size(42.dp)
-                    )
                 }
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_sloth_logo),
+                    contentDescription = "Sloth Logo",
+                    modifier = Modifier
+                        .size(68.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                )
             }
             Text(
                 text = if (isScanning) "Ленивец анализирует скриншоты..."
