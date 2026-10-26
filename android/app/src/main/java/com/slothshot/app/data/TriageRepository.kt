@@ -188,6 +188,15 @@ class TriageRepository private constructor(context: Context) {
         persistItems(updated)
     }
 
+    fun markActionDone(id: String) {
+        val current = _itemsFlow.value
+        val updated = current.map {
+            if (it.id == id) it.copy(retention = RetentionClass.KEEP_ARCHIVE) else it
+        }
+        _itemsFlow.value = updated
+        persistItems(updated)
+    }
+
     fun restoreItem(id: String) {
         val current = _itemsFlow.value
         val updated = current.map {

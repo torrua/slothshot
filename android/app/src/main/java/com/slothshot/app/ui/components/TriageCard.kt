@@ -305,7 +305,7 @@ fun TriageCard(
                 FilledTonalButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        handleAction(context, item.primaryActionType, item.primaryActionPayload)
+                        handleItemAction(context, item.primaryActionType, item.primaryActionPayload)
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
@@ -386,7 +386,7 @@ fun TriageCard(
     }
 }
 
-private fun handleAction(context: Context, type: ActionType, payload: String) {
+fun handleItemAction(context: Context, type: ActionType, payload: String) {
     when (type) {
         ActionType.COPY -> {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

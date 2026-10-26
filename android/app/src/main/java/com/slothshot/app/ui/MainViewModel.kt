@@ -42,6 +42,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val urgentItems: StateFlow<List<TriageItem>> = items.map { list ->
+        list.filter { it.retention == RetentionClass.ACTION_REQUIRED && !it.isPurged }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun scanGallery() {
         if (isScanning.value) return
         viewModelScope.launch {
@@ -59,6 +63,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.scanGalleryScreenshots(limit = 40)
             isScanning.value = false
         }
+    }
+
+    fun markActionDone(id: String) {
+        repository.markActionDone(id)
     }
 
     fun markItemPurged(id: String) {

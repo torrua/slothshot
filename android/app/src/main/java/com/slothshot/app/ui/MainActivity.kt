@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
             SlothShotTheme {
                 val metrics by viewModel.metrics.collectAsState()
                 val items by viewModel.filteredItems.collectAsState()
+                val urgentItems by viewModel.urgentItems.collectAsState()
                 val filter by viewModel.filter.collectAsState()
                 val isScanning by viewModel.isScanning.collectAsState()
                 val rawContentItem by viewModel.rawContentItem.collectAsState()
@@ -170,7 +171,28 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 2. Sticky Category Filter Pills Row (pinned under TopAppBar with subtle border & elevation)
+                        // 2. Urgent Action Deck (⚡ ТРЕБУЕТ ДЕЙСТВИЯ — 1-тап решения задач из скриншотов)
+                        if (filter !is FilterType.PurgedOnly && urgentItems.isNotEmpty()) {
+                            item(key = "urgent_action_deck") {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
+                                    UrgentActionDeck(
+                                        urgentItems = urgentItems,
+                                        onMarkDone = { item ->
+                                            viewModel.markActionDone(item.id)
+                                            Toast.makeText(this@MainActivity, "Выполнено — сохранено в архив", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onPurgeClicked = { item ->
+                                            requestPurge(listOf(item))
+                                        },
+                                        onImageClicked = { item ->
+                                            viewModel.fullScreenImageItem.value = item
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // 3. Sticky Category Filter Pills Row (pinned under TopAppBar with subtle border & elevation)
                         @OptIn(ExperimentalFoundationApi::class)
                         stickyHeader(key = "sticky_filter_pills") {
                             Surface(
