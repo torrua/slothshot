@@ -97,17 +97,15 @@ class MainActivity : ComponentActivity() {
                 val rawContentItem by viewModel.rawContentItem.collectAsState()
                 val fullScreenImageItem by viewModel.fullScreenImageItem.collectAsState()
                 val showSettings by viewModel.showSettings.collectAsState()
-                val qwenModelState by viewModel.qwenModelState.collectAsState()
 
                 Scaffold(
                     topBar = {
                         SlothTopAppBar(
                             isMonitoring = viewModel.isMonitoringActive(),
-                            isQwenReady = qwenModelState is QwenModelState.Ready,
+                            hasGeminiKey = viewModel.getApiKey().isNotBlank(),
                             isScanning = isScanning,
                             onScanClicked = { viewModel.scanGallery() },
-                            onSettingsClicked = { viewModel.showSettings.value = true },
-                            onQwenClicked = { viewModel.showSettings.value = true }
+                            onSettingsClicked = { viewModel.showSettings.value = true }
                         )
                     },
                     floatingActionButton = {
@@ -166,21 +164,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 2. Active Download or Error Banner for Local VLM (only shown when Downloading or Error!)
-                        if (qwenModelState is QwenModelState.Downloading || qwenModelState is QwenModelState.Error) {
-                            item(key = "qwen_model_status") {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    QwenModelStatusCard(
-                                        modelState = qwenModelState,
-                                        onStartDownload = { viewModel.startQwenDownload() },
-                                        onCancelDownload = { viewModel.cancelQwenDownload() },
-                                        onDeleteModel = { viewModel.deleteQwenModel() }
-                                    )
-                                }
-                            }
-                        }
-
-                        // 3. Sticky Category Filter Pills Row (pinned under TopAppBar with subtle border & elevation)
+                        // 2. Sticky Category Filter Pills Row (pinned under TopAppBar with subtle border & elevation)
                         @OptIn(ExperimentalFoundationApi::class)
                         stickyHeader(key = "sticky_filter_pills") {
                             Surface(
@@ -239,19 +223,15 @@ class MainActivity : ComponentActivity() {
                         onDismiss = { viewModel.fullScreenImageItem.value = null }
                     )
 
-                    // Settings Dialog with Qwen on-device AI management
+                    // Settings Dialog
                     if (showSettings) {
                         SettingsModal(
                             currentApiKey = viewModel.getApiKey(),
                             autoCopyOtp = viewModel.isAutoCopyOtpEnabled(),
                             monitoringActive = viewModel.isMonitoringActive(),
-                            qwenModelState = qwenModelState,
                             onSaveSettings = { key, autoCopy, monitoring ->
                                 viewModel.updateSettings(key, autoCopy, monitoring)
                             },
-                            onStartQwenDownload = { viewModel.startQwenDownload() },
-                            onCancelQwenDownload = { viewModel.cancelQwenDownload() },
-                            onDeleteQwenModel = { viewModel.deleteQwenModel() },
                             onClearAndRescan = { viewModel.clearAndRescan() },
                             onDismiss = { viewModel.showSettings.value = false }
                         )
@@ -324,11 +304,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun SlothTopAppBar(
     isMonitoring: Boolean,
-    isQwenReady: Boolean,
+    hasGeminiKey: Boolean,
     isScanning: Boolean,
     onScanClicked: () -> Unit,
-    onSettingsClicked: () -> Unit,
-    onQwenClicked: () -> Unit = onSettingsClicked
+    onSettingsClicked: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -386,27 +365,21 @@ private fun SlothTopAppBar(
                         }
                     }
                 }
-                if (isQwenReady) {
+                if (hasGeminiKey) {
                     Surface(
-                        onClick = onQwenClicked,
-                        color = SlothSecondary.copy(alpha = 0.12f),
+                        onClick = onSettingsClicked,
+                        color = SlothPrimary.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(100.dp),
-                        border = BorderStroke(1.dp, SlothSecondary.copy(alpha = 0.25f))
+                        border = BorderStroke(1.dp, SlothPrimary.copy(alpha = 0.25f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Psychology,
-                                contentDescription = null,
-                                tint = SlothSecondary,
-                                modifier = Modifier.size(11.dp)
-                            )
                             Text(
-                                text = "QWEN AI",
-                                color = SlothSecondary,
+                                text = "⚡ GEMINI",
+                                color = SlothPrimary,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 0.4.sp

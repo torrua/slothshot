@@ -135,36 +135,7 @@ class TriageRepository private constructor(context: Context) {
             return@withContext item
         }
 
-        // Path 2: On-Device Multimodal VLM (Alibaba Qwen2.5-VL 3B)
-        if (qwenModelManager.isModelReady()) {
-            val qwenResult = qwenVision.triage(appContext, uri, fileName)
-            if (qwenResult != null) {
-                val item = TriageItem(
-                    id = UUID.randomUUID().toString(),
-                    uriString = uri.toString(),
-                    fileName = fileName,
-                    timestamp = System.currentTimeMillis(),
-                    fileSizeBytes = sizeBytes,
-                    category = qwenResult.category,
-                    retention = qwenResult.retention,
-                    title = qwenResult.title,
-                    summary = qwenResult.summary,
-                    keyValues = qwenResult.keyValues,
-                    tags = qwenResult.tags,
-                    primaryActionType = qwenResult.actionType,
-                    primaryActionLabel = qwenResult.actionLabel,
-                    primaryActionPayload = qwenResult.actionPayload,
-                    rawContent = qwenResult.fullRawContent.orEmpty(),
-                    isPurged = false
-                )
-                val updated = listOf(item) + _itemsFlow.value
-                _itemsFlow.value = updated
-                persistItems(updated)
-                return@withContext item
-            }
-        }
-
-        // Path 3: 100% On-Device Offline Engine (Tesseract Cyrillic + ML Kit Translator)
+        // Path 2: 100% On-Device Engine (Option B: High-Res Dark-Mode Cyrillic OCR + Translation)
         var rawText = tesseractOcr.recognizeText(appContext, uri)
         if (rawText.isBlank()) {
             // Fallback to ML Kit if Tesseract couldn't extract
