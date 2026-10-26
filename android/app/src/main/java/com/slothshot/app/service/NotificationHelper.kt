@@ -45,7 +45,7 @@ object NotificationHelper {
     fun buildForegroundNotification(context: Context) =
         NotificationCompat.Builder(context, CHANNEL_MONITOR)
             .setContentTitle("SlothShot Active")
-            .setContentText("Quietly monitoring screenshots to extract takeaways 🦥")
+            .setContentText("Quietly monitoring screenshots to extract takeaways")
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .build()
@@ -68,7 +68,7 @@ object NotificationHelper {
 
         val builder = NotificationCompat.Builder(context, CHANNEL_TRIAGE)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("${item.category.emoji} ${item.title}")
+            .setContentTitle("[${item.category.displayName}] ${item.title}")
             .setContentText(item.summary)
             .setStyle(NotificationCompat.BigTextStyle().bigText("${item.summary}\n\nTakeaway: ${item.primaryActionPayload}"))
             .setContentIntent(pendingContentIntent)

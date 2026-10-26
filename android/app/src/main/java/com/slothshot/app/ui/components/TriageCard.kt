@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -84,13 +85,24 @@ fun TriageCard(
                     shape = RoundedCornerShape(100.dp),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f))
                 ) {
-                    Text(
-                        text = "${item.category.emoji} ${item.category.displayName}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = item.category.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = item.category.displayName,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 // Retention Badge
@@ -105,13 +117,25 @@ fun TriageCard(
                     shape = RoundedCornerShape(100.dp),
                     border = BorderStroke(1.dp, if (item.isPurged) Color.White.copy(alpha = 0.1f) else retentionColor.copy(alpha = 0.25f))
                 ) {
-                    Text(
-                        text = if (item.isPurged) "ОЧИЩЕНО 🗑️" else item.retention.label,
-                        color = if (item.isPurged) Color.Gray else retentionColor,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val badgeIcon = if (item.isPurged) Icons.Default.DeleteOutline else item.retention.icon
+                        Icon(
+                            imageVector = badgeIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = if (item.isPurged) Color.Gray else retentionColor
+                        )
+                        Text(
+                            text = if (item.isPurged) "ОЧИЩЕНО" else item.retention.label,
+                            color = if (item.isPurged) Color.Gray else retentionColor,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

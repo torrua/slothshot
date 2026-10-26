@@ -5,10 +5,18 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,32 +47,38 @@ fun FilterPillsRow(
         SleekChip(
             selected = selectedFilter is FilterType.All,
             onClick = { onFilterSelected(FilterType.All) },
-            label = "Все"
+            label = "Все",
+            icon = Icons.Default.Apps
         )
         SleekChip(
             selected = selectedFilter is FilterType.EphemeralOnly,
             onClick = { onFilterSelected(FilterType.EphemeralOnly) },
-            label = "⚡ Мусор / 2FA"
+            label = "Мусор / 2FA",
+            icon = Icons.Default.Bolt
         )
         SleekChip(
             selected = selectedFilter is FilterType.ByCategory && selectedFilter.category == ContentCategory.ENTERTAINMENT_MEDIA,
             onClick = { onFilterSelected(FilterType.ByCategory(ContentCategory.ENTERTAINMENT_MEDIA)) },
-            label = "🎬 Кино и книги"
+            label = "Кино и книги",
+            icon = Icons.Default.Movie
         )
         SleekChip(
             selected = selectedFilter is FilterType.ByCategory && selectedFilter.category == ContentCategory.TRANSACTIONAL_RECEIPT,
             onClick = { onFilterSelected(FilterType.ByCategory(ContentCategory.TRANSACTIONAL_RECEIPT)) },
-            label = "🧾 Чеки и заказы"
+            label = "Чеки и заказы",
+            icon = Icons.AutoMirrored.Filled.ReceiptLong
         )
         SleekChip(
             selected = selectedFilter is FilterType.ByCategory && selectedFilter.category == ContentCategory.KNOWLEDGE_REFERENCE,
             onClick = { onFilterSelected(FilterType.ByCategory(ContentCategory.KNOWLEDGE_REFERENCE)) },
-            label = "📚 Заметки"
+            label = "Заметки",
+            icon = Icons.AutoMirrored.Filled.MenuBook
         )
         SleekChip(
             selected = selectedFilter is FilterType.PurgedOnly,
             onClick = { onFilterSelected(FilterType.PurgedOnly) },
-            label = "🗑️ Очищенные"
+            label = "Очищенные",
+            icon = Icons.Default.DeleteOutline
         )
     }
 }
@@ -73,11 +87,22 @@ fun FilterPillsRow(
 private fun SleekChip(
     selected: Boolean,
     onClick: () -> Unit,
-    label: String
+    label: String,
+    icon: ImageVector? = null
 ) {
     FilterChip(
         selected = selected,
         onClick = onClick,
+        leadingIcon = if (icon != null) {
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                    tint = if (selected) Color(0xFF090D16) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else null,
         label = {
             Text(
                 text = label,
@@ -90,8 +115,10 @@ private fun SleekChip(
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = SlothPrimary,
             selectedLabelColor = Color(0xFF090D16),
+            selectedLeadingIconColor = Color(0xFF090D16),
             containerColor = Color.White.copy(alpha = 0.04f),
-            labelColor = Color(0xFFCBD5E1)
+            labelColor = Color(0xFFCBD5E1),
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
 }

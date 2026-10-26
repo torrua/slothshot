@@ -20,6 +20,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.FolderDelete
 import androidx.compose.material.icons.filled.Psychology
@@ -38,10 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.slothshot.app.R
 import com.slothshot.app.ai.QwenModelState
 import com.slothshot.app.model.RetentionClass
 import com.slothshot.app.model.TriageItem
@@ -326,9 +330,10 @@ private fun SlothTopAppBar(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "🦥",
-                        fontSize = 18.sp
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_sloth_logo),
+                        contentDescription = "SlothShot Logo",
+                        modifier = Modifier.size(24.dp)
                     )
                 }
                 Text(
@@ -377,8 +382,14 @@ private fun SlothTopAppBar(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(11.dp),
+                                tint = SlothPrimary
+                            )
                             Text(
-                                text = "⚡ GEMINI",
+                                text = "GEMINI",
                                 color = SlothPrimary,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -449,10 +460,19 @@ private fun EmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "🦥",
-                fontSize = 48.sp
-            )
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(SlothPrimary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_sloth_logo),
+                    contentDescription = "Sloth Logo",
+                    modifier = Modifier.size(42.dp)
+                )
+            }
             Text(
                 text = if (isScanning) "Ленивец анализирует скриншоты..." else "Лента скриншотов пуста",
                 style = MaterialTheme.typography.titleMedium,

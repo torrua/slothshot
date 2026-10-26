@@ -149,7 +149,7 @@ class TriageRepository private constructor(context: Context) {
         val takeaway = heuristicTriage.triage(translatedRussianText.ifBlank { rawText }, fileName)
 
         val fullDisplayContent = if (translatedRussianText.isNotBlank() && translatedRussianText != rawText) {
-            "🇷🇺 Перевод на русский:\n$translatedRussianText\n\n📄 Оригинал OCR:\n$rawText"
+            "Перевод на русский:\n$translatedRussianText\n\nОригинал OCR:\n$rawText"
         } else {
             rawText
         }

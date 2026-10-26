@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
@@ -194,7 +195,12 @@ fun SettingsModal(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
-                        Text("💡", fontSize = 14.sp)
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = SlothPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Text(
                             text = "Бесплатный ключ Gemini от Google AI Studio (15 запр/мин) обеспечивает визуальный перевод и OCR кириллицы со 100% точностью.",
                             fontSize = 11.sp,
@@ -243,7 +249,7 @@ fun SettingsModal(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Локальный OCR активен 🟢",
+                                text = "Локальный OCR активен",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.5.sp,
                                 color = Color(0xFF10B981)

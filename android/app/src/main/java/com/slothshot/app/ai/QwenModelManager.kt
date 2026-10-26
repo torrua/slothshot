@@ -204,7 +204,7 @@ class QwenModelManager private constructor(context: Context) {
     private fun updateDownloadNotification(progress: Int, fileName: String) {
         val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notif = NotificationCompat.Builder(appContext, "qwen_download_channel")
-            .setContentTitle("Загрузка Alibaba Qwen2.5-VL 3B 🦥")
+            .setContentTitle("Загрузка Alibaba Qwen2.5-VL 3B")
             .setContentText("$fileName ($progress%)")
             .setSmallIcon(R.drawable.ic_notification)
             .setProgress(100, progress, false)
@@ -217,7 +217,7 @@ class QwenModelManager private constructor(context: Context) {
         val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(2002)
         val notif = NotificationCompat.Builder(appContext, "qwen_download_channel")
-            .setContentTitle("Qwen2.5-VL 3B готова к работе 🟢")
+            .setContentTitle("Qwen2.5-VL 3B готова к работе")
             .setContentText("100% оффлайн-зрение для скриншотов активировано!")
             .setSmallIcon(R.drawable.ic_notification)
             .setAutoCancel(true)

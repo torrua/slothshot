@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SlothShot 🦥 Zero-Effort Android Screenshot Butler</title>
+  <title>SlothShot — Zero-Effort Android Screenshot Butler</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#10b981">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,8 +34,11 @@
   <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
     <div class="max-w-4xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-2xl shadow-lg shadow-emerald-950/50">
-          🦥
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-950/50">
+          <svg class="w-6 h-6 text-white" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M24,4C12.95,4 4,12.95 4,24c0,11.05 8.95,20 20,20s20,-8.95 20,-20C44,12.95 35.05,4 24,4z M24,40c-8.84,0 -16,-7.16 -16,-16S15.16,8 24,8s16,7.16 16,16S32.84,40 24,40z" opacity="0.9"/>
+            <path fill="currentColor" d="M18,20a3,3 0 1,0 0,-6 3,3 0 0,0 0,6z M30,20a3,3 0 1,0 0,-6 3,3 0 0,0 0,6z M24,26c-4.42,0 -8,2.69 -8,6h16c0,-3.31 -3.58,-6 -8,-6z"/>
+          </svg>
         </div>
         <div>
           <h1 class="text-lg font-bold tracking-tight flex items-center gap-2">
@@ -326,7 +329,12 @@
         } else {
           grid.innerHTML = `
             <div class="text-center py-16 bg-slate-900/30 border border-slate-800/80 rounded-2xl">
-              <div class="text-4xl mb-3">🦥</div>
+              <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <svg class="w-7 h-7" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill="currentColor" d="M24,4C12.95,4 4,12.95 4,24c0,11.05 8.95,20 20,20s20,-8.95 20,-20C44,12.95 35.05,4 24,4z M24,40c-8.84,0 -16,-7.16 -16,-16S15.16,8 24,8s16,7.16 16,16S32.84,40 24,40z" opacity="0.9"/>
+                  <path fill="currentColor" d="M18,20a3,3 0 1,0 0,-6 3,3 0 0,0 0,6z M30,20a3,3 0 1,0 0,-6 3,3 0 0,0 0,6z M24,26c-4.42,0 -8,2.69 -8,6h16c0,-3.31 -3.58,-6 -8,-6z"/>
+                </svg>
+              </div>
               <h3 class="text-sm font-semibold text-slate-300">Your screenshot feed is clean!</h3>
               <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Upload Android screenshots or sync via ADB to let TabPFN & Gemma do the thinking.</p>
             </div>
