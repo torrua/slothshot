@@ -492,11 +492,11 @@ private fun SlothTopAppBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_sloth_logo),
+                    painter = painterResource(id = R.drawable.ic_sloth_logo_round),
                     contentDescription = "SlothShot Logo",
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(36.dp)
+                        .clip(CircleShape)
                 )
                 Text(
                     text = "SlothShot",

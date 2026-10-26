@@ -1,10 +1,12 @@
 package com.slothshot.app.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.slothshot.app.R
@@ -42,17 +44,30 @@ object NotificationHelper {
         }
     }
 
-    fun buildForegroundNotification(context: Context) =
-        NotificationCompat.Builder(context, CHANNEL_MONITOR)
+    fun buildForegroundNotification(context: Context): Notification {
+        val largeIcon = runCatching {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_sloth_logo_round)
+        }.getOrNull()
+
+        return NotificationCompat.Builder(context, CHANNEL_MONITOR)
             .setContentTitle("SlothShot")
             .setContentText("Авто-разбор новых скриншотов")
             .setSmallIcon(R.drawable.ic_notification)
+            .apply {
+                if (largeIcon != null) setLargeIcon(largeIcon)
+            }
+            .setColor(0xFF10B981.toInt())
             .setOngoing(true)
             .build()
+    }
 
     fun showTriageNotification(context: Context, item: TriageItem) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notifId = item.id.hashCode()
+
+        val largeIcon = runCatching {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_sloth_logo_round)
+        }.getOrNull()
 
         // Content intent: open app
         val contentIntent = Intent(context, MainActivity::class.java).apply {
@@ -68,6 +83,10 @@ object NotificationHelper {
 
         val builder = NotificationCompat.Builder(context, CHANNEL_TRIAGE)
             .setSmallIcon(R.drawable.ic_notification)
+            .apply {
+                if (largeIcon != null) setLargeIcon(largeIcon)
+            }
+            .setColor(0xFF10B981.toInt())
             .setContentTitle("${item.category.displayName}: ${item.title}")
             .setContentText(item.summary)
             .setStyle(NotificationCompat.BigTextStyle().bigText(if (item.primaryActionPayload.isNotBlank()) "${item.summary}\n\n${item.primaryActionPayload}" else item.summary))
