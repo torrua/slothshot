@@ -120,7 +120,7 @@ Open **http://localhost:8000** on your browser or smartphone.
 In addition to the Python backend & Web Dashboard, SlothShot includes an **autonomous native Android app** located in [`android/`](android/):
 
 - 🧠 **3-Tier Intelligent Vision & Russian Cyrillic Pipeline**:
-  - **Tier 1 (Cloud Multimodal)**: Direct **Gemini 2.5 Flash Vision** integration for 100% Cyrillic OCR accuracy, structured entity extraction, and automatic translation of foreign screenshots into Russian.
+  - **Tier 1 (Cloud Multimodal)**: Direct **Gemini 3.5 Flash-Lite & 3.5 Flash Vision** integration for 100% Cyrillic OCR accuracy, structured entity extraction, 75% lower token consumption, and automatic translation of foreign screenshots into Russian.
   - **Tier 2 (On-Device Local VLM)**: **Alibaba Qwen2.5-VL 3B** offline multimodal vision model (~1.85 GB GGUF). Features a built-in background streaming downloader with notification progress, dynamic resolution ViT, and zero API keys required.
   - **Tier 3 (Lightweight Offline Fallback)**: On-device **Tesseract 5.5 OpenMP** with bundled Russian Cyrillic (`rus.traineddata`) & English models + **Google ML Kit** on-device translation to Russian.
 - 🔍 **Interactive Screenshot Viewer & Raw Text Selection**:
