@@ -358,16 +358,30 @@ class MainActivity : ComponentActivity() {
                         } else {
                             items(items, key = { it.id }) { item ->
                                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    TriageCard(
+                                    SwipeableTriageItem(
                                         item = item,
-                                        onPurgeClicked = { requestPurge(listOf(it)) },
-                                        onViewRawContent = { viewModel.rawContentItem.value = it },
-                                        onImageClicked = { viewModel.fullScreenImageItem.value = it },
-                                        onRestoreClicked = {
-                                            viewModel.restoreItem(it.id)
-                                            Toast.makeText(this@MainActivity, "Восстановлено из архива", Toast.LENGTH_SHORT).show()
+                                        onSwipeDelete = { requestPurge(listOf(it)) },
+                                        onSwipeSave = {
+                                            if (it.isPurged) {
+                                                viewModel.restoreItem(it.id)
+                                                Toast.makeText(this@MainActivity, "Восстановлено из архива", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                viewModel.markActionDone(it.id)
+                                                Toast.makeText(this@MainActivity, "Сохранено в базу знаний", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    )
+                                    ) {
+                                        TriageCard(
+                                            item = item,
+                                            onPurgeClicked = { requestPurge(listOf(it)) },
+                                            onViewRawContent = { viewModel.rawContentItem.value = it },
+                                            onImageClicked = { viewModel.fullScreenImageItem.value = it },
+                                            onRestoreClicked = {
+                                                viewModel.restoreItem(it.id)
+                                                Toast.makeText(this@MainActivity, "Восстановлено из архива", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
