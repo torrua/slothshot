@@ -28,12 +28,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.FolderDelete
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -99,6 +102,7 @@ class MainActivity : ComponentActivity() {
                 val metrics by viewModel.metrics.collectAsState()
                 val items by viewModel.filteredItems.collectAsState()
                 val urgentItems by viewModel.urgentItems.collectAsState()
+                val hubStats by viewModel.hubStats.collectAsState()
                 val filter by viewModel.filter.collectAsState()
                 val isScanning by viewModel.isScanning.collectAsState()
                 val rawContentItem by viewModel.rawContentItem.collectAsState()
@@ -204,6 +208,7 @@ class MainActivity : ComponentActivity() {
                                     FilterPillsRow(
                                         selectedFilter = filter,
                                         onFilterSelected = { viewModel.filter.value = it },
+                                        hubStats = hubStats,
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                     HorizontalDivider(
@@ -212,6 +217,130 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                        }
+
+                        // Hub Contextual Summary Strip (for focused views)
+                        when (filter) {
+                            is FilterType.Receipts -> {
+                                item(key = "hub_banner_receipts") {
+                                    Surface(
+                                        color = SlothPrimary.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, SlothPrimary.copy(alpha = 0.2f)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = SlothPrimary
+                                                )
+                                                Text(
+                                                    text = if (hubStats.receiptsTotalAmount > 0)
+                                                        "Сумма по чекам: ${String.format("%,.0f ₽", hubStats.receiptsTotalAmount).replace(",", " ")}"
+                                                    else "Чеки и платежи",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.5.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                            Text(
+                                                text = "${hubStats.receiptsCount} операций",
+                                                fontSize = 11.5.sp,
+                                                color = SlothPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            is FilterType.Shopping -> {
+                                item(key = "hub_banner_shopping") {
+                                    Surface(
+                                        color = Color(0xFFA855F7).copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFA855F7).copy(alpha = 0.2f)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ShoppingCart,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = Color(0xFFA855F7)
+                                            )
+                                            Text(
+                                                text = "Вишлист и покупки: ${hubStats.shoppingCount} сохраненных товаров",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.5.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            is FilterType.EphemeralOnly -> {
+                                item(key = "hub_banner_ephemeral") {
+                                    Surface(
+                                        color = SlothError.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, SlothError.copy(alpha = 0.2f)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteOutline,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = SlothError
+                                                )
+                                                Text(
+                                                    text = "Мусор к удалению: ${hubStats.ephemeralCount} скринов",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.5.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                            if (hubStats.ephemeralBytes > 0) {
+                                                Text(
+                                                    text = "Объем: ${if (hubStats.ephemeralBytes >= 1_000_000) String.format("%.1f МБ", hubStats.ephemeralBytes / 1_000_000.0) else "${hubStats.ephemeralBytes / 1000} КБ"}",
+                                                    fontSize = 11.5.sp,
+                                                    color = SlothError,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else -> {}
                         }
 
                         // 4. Screenshots List or Empty State (dominates the viewport!)
