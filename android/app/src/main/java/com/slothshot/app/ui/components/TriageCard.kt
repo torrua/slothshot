@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -142,7 +143,7 @@ fun TriageCard(
                 }
             }
 
-            // Middle: Image thumbnail + Title & Summary (tap text to toggle expansion)
+            // Middle: Image thumbnail on the left, Title & ALL TAGS to the right
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -151,7 +152,7 @@ fun TriageCard(
                 // Thumbnail (clickable for full-screen view)
                 Box(
                     modifier = Modifier
-                        .size(68.dp)
+                        .size(76.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White.copy(alpha = 0.04f))
                         .clickable { onImageClicked(item) },
@@ -165,131 +166,139 @@ fun TriageCard(
                     )
                 }
 
-                // Title & Summary (tap to expand/collapse full description)
+                // Right of thumbnail: Title and ALL TAGS
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            isExpanded = !isExpanded
-                        },
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = item.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = item.summary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 3,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 18.sp
-                    )
 
-                    // Expand/collapse indicator button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Text(
-                            text = if (isExpanded) "Свернуть" else "Подробнее",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SlothPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.sp
-                        )
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (isExpanded) "Свернуть" else "Развернуть",
-                            modifier = Modifier.size(14.dp),
-                            tint = SlothPrimary
-                        )
+                    // All tags positioned right next to the thumbnail
+                    if (item.tags.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            item.tags.forEach { tag ->
+                                val formattedTag = if (tag.startsWith("#")) tag else "#$tag"
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = SlothPrimary.copy(alpha = 0.08f),
+                                    border = BorderStroke(1.dp, SlothPrimary.copy(alpha = 0.22f))
+                                ) {
+                                    Text(
+                                        text = formattedTag,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 11.sp,
+                                        color = SlothPrimary,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // Key-Values & Tags chips with wrapping FlowRow (never truncated with ugly ellipses!)
-            val hasContent = item.keyValues.isNotEmpty() || item.tags.isNotEmpty()
-            if (hasContent) {
-                val displayedKeyValues = if (isExpanded) item.keyValues.entries.toList() else item.keyValues.entries.take(3).toList()
-                val displayedTags = if (isExpanded) item.tags else emptyList()
+            // Text section below (Текст - внизу, свободный от пузырей)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        isExpanded = !isExpanded
+                    },
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Main summary text (чистый читаемый текст, а не пузыри)
+                Text(
+                    text = item.summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    lineHeight = 20.sp,
+                    fontSize = 13.5.sp,
+                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    displayedKeyValues.forEach { (k, v) ->
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White.copy(alpha = 0.04f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-                            modifier = Modifier.clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                isExpanded = !isExpanded
+                // Key Facts & Parameters (структурированная аккуратная таблица фактов вместо облака пузырей)
+                if (item.keyValues.isNotEmpty()) {
+                    val displayedKvs = if (isExpanded) item.keyValues.entries.toList() else item.keyValues.entries.take(3).toList()
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.035f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        displayedKvs.forEach { (k, v) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = k,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.weight(0.45f)
+                                )
+                                Text(
+                                    text = v,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = SlothPrimary,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.End,
+                                    modifier = Modifier.weight(0.55f)
+                                )
                             }
-                        ) {
+                        }
+
+                        if (!isExpanded && item.keyValues.size > 3) {
                             Text(
-                                text = "$k: $v",
+                                text = "+ ещё ${item.keyValues.size - 3} параметра",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = SlothPrimary,
-                                maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    displayedTags.forEach { tag ->
-                        val formattedTag = if (tag.startsWith("#")) tag else "#$tag"
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = SlothPrimary.copy(alpha = 0.08f),
-                            border = BorderStroke(1.dp, SlothPrimary.copy(alpha = 0.22f)),
-                            modifier = Modifier.clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                isExpanded = !isExpanded
-                            }
-                        ) {
-                            Text(
-                                text = formattedTag,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = SlothPrimary,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    if (!isExpanded && (item.keyValues.size > 3 || item.tags.isNotEmpty())) {
-                        val hiddenCount = (item.keyValues.size - 3).coerceAtLeast(0) + item.tags.size
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White.copy(alpha = 0.03f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
-                            modifier = Modifier.clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                isExpanded = true
-                            }
-                        ) {
-                            Text(
-                                text = "+$hiddenCount ещё",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(top = 2.dp)
                             )
                         }
                     }
+                }
+
+                // Expand/collapse indicator button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = if (isExpanded) "Свернуть" else "Подробнее",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SlothPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp
+                    )
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isExpanded) "Свернуть" else "Развернуть",
+                        modifier = Modifier.size(14.dp),
+                        tint = SlothPrimary
+                    )
                 }
             }
 
